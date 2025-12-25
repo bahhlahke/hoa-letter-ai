@@ -6,7 +6,8 @@ import Stripe from "stripe";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Provide a second empty options object to satisfy the constructor signature.
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {} as any);
 
 export async function GET(req: NextRequest) {
   try {

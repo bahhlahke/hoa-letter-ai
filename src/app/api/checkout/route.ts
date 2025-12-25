@@ -9,7 +9,10 @@ export const runtime = "nodejs";
 // Initialize Stripe without specifying apiVersion. Newer SDK versions infer
 // a default version automatically, and specifying one can cause build
 // failures in serverless environments like Vercel.
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Pass an empty options object as the second argument. The Stripe types
+// expect two parameters, so providing an empty object satisfies the
+// signature without specifying an API version.
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {} as any);
 
 export async function POST(req: NextRequest) {
   try {
