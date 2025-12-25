@@ -4,7 +4,8 @@ import Stripe from "stripe";
 // Initialize Stripe without specifying apiVersion. Newer SDK versions infer
 // a default version automatically, and specifying one can cause build
 // failures in serverless environments like Vercel.
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {} as any);
+
 
 export async function POST(req: Request) {
   try {
