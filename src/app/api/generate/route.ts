@@ -1,51 +1,61 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
-// Configure the OpenAI client with the API key from environment variables.
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-// Helper to safely coerce potentially unknown values into strings and
-// truncate them to a maximum length. This helps prevent prompt injection
-// and ensures that overly long user inputs don't cause issues.
-function safeStr(value: unknown, max = 1200) {
-  const s = typeof value === "string" ? value.trim() : "";
+function safeStr(v: unknown, max = 1200): string {
+  const s = typeof v === "string" ? v.trim() : "";
   return s.length > max ? s.slice(0, max) : s;
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+
     const violationType = safeStr(body.violationType, 64) || "Other";
     const tone = safeStr(body.tone, 32) || "Neutral";
     const dueDate = safeStr(body.dueDate, 80);
     const communityName = safeStr(body.communityName, 80);
-    const ruleRef = safeStr(body.ruleRef, 120);
-    const details = safeStr(body.details, 800);
+    const ruleRef = safeStr(body.ruleRef, 140);
+    const details = safeStr(body.details, 900);
 
-    // Compose system and user messages for the language model. The system
-    // message instructs the assistant on style and safety constraints. The
-    // user message includes all the structured form inputs.
-    const system = `You write concise, professional HOA violation letters.\n\nRules:\n- Use a non-accusatory, factual tone.\n- Do not threaten legal action or mention fines unless explicitly provided in the user's details.\n- Include what was observed, a request to correct, any due date if provided, and a contact line.\n- Keep the letter under 250 words.\n- Output only the letter text.`;
+    const system = [
+      "You write concise, professional HOA violation letters.",
+      "Rules:",
+      "- Non-accusatory, factual tone. No threats. No legal advice.",
+      "- Do not mention fines or legal action unless explicitly included in the user 'details'.",
+      "- Include: what was observed, request to correct, a due date if provided, and a contact line.",
+      "- Keep it under 250 words.",
+      "- Output only the letter text, no headings like 'Subject:' unless user requested."
+    ].join("\n");
 
-    const user = `Generate an HOA violation letter.\n\nCommunity name: ${communityName || "(not provided)"}\nViolation type: ${violationType}\nTone: ${tone}\nDue date: ${dueDate || "(not provided)"}\nRule reference: ${ruleRef || "(not provided)"}\nAdditional details: ${details || "(none)"}`;
+    const user = `Generate an HOA violation letter.
 
-    const completion = await openai.chat.completions.create({
+Community name: ${communityName || "(not provided)"}
+Violation type: ${violationType}
+Tone: ${tone}
+Due date: ${dueDate || "(not provided)"}
+Rule reference: ${ruleRef || "(not provided)"}
+Additional details: ${details || "(none)"}
+`;
+
+    const resp = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: system },
-        { role: "user", content: user },
+        { role: "user", content: user }
       ],
-      temperature: 0.4,
-      max_tokens: 300,
+      temperature: 0.35
     });
 
-    const letter = completion.choices?.[0]?.message?.content?.trim() || "";
-    if (!letter) {
-      return NextResponse.json({ error: "Empty response from language model" }, { status: 500 });
-    }
+    const letter = resp.choices?.[0]?.message?.content?.trim() || "";
+    if (!letter) return NextResponse.json({ error: "Empty output" }, { status: 500 });
+
     return NextResponse.json({ letter });
-  } catch (error: any) {
-    console.error(error);
-    return NextResponse.json({ error: error?.message ?? "Server error" }, { status: 500 });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message ?? "Server error" }, { status: 500 });
   }
 }
