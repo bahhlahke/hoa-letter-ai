@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import Stripe from "stripe";
 
-// ✅ Tell Next this route is always dynamic (fixes DYNAMIC_SERVER_USAGE)
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -16,8 +15,18 @@ export async function GET(req: NextRequest) {
     }
 
     const session = await stripe.checkout.sessions.retrieve(sessionId);
+
     const paid = session.payment_status === "paid";
-    return NextResponse.json({ paid });
+    const mode = session.mode; // "payment" | "subscription" | "setup"
+    const customerId =
+      typeof session.customer === "string" ? session.customer : session.customer?.id ?? null;
+
+    const subscriptionId =
+      typeof session.subscription === "string"
+        ? session.subscription
+        : session.subscription?.id ?? null;
+
+    return NextResponse.json({ paid, mode, customerId, subscriptionId });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? "Error" }, { status: 500 });
   }
