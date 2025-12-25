@@ -1,3 +1,4 @@
+import React from 'react';
 export const metadata = {
   title: "HOA Letter AI",
   description: "Generate HOA violation letters",
