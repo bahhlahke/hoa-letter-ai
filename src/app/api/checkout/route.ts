@@ -6,6 +6,9 @@ import Stripe from "stripe";
 // failures in serverless environments like Vercel.
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {} as any);
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 
 export async function POST(req: Request) {
   try {
