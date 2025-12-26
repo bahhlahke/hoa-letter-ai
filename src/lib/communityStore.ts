@@ -43,9 +43,14 @@ export async function updateCommunity(
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("UPDATE FAILED:", error);
+    throw error;
+  }
+
   return data as Community;
 }
+
 
 export function publicLogoUrl(logo_path: string | null): string | null {
   if (!logo_path) return null;
