@@ -7,14 +7,16 @@ export async function buildHoaPdfBytes(params: {
   const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
 
   const pdfDoc = await PDFDocument.create();
-  let page = pdfDoc.addPage([612, 792]); // US Letter
+  const pageSize: [number, number] = [612, 792]; // US Letter
+  let page = pdfDoc.addPage(pageSize);
   const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
 
-  // Margins + layout similar to HOA templates
-  const marginX = 72; // 1 inch
-  const top = 740;
+  // Margins + layout similar to HOA templates, with slightly tighter top padding
+  const marginX = 54; // ~0.75 inch
+  const top = 770;
   let y = top;
+  let headerBlockHeight = 0;
 
   // Optional logo
   if (params.logoUrl) {
@@ -27,10 +29,11 @@ export async function buildHoaPdfBytes(params: {
         let img: any = null;
         try { img = await pdfDoc.embedPng(bytes); } catch { img = await pdfDoc.embedJpg(bytes); }
         const dims = img.scale(1);
-        const targetH = 48;
+        const targetH = 52;
         const scale = targetH / dims.height;
         const w = dims.width * scale;
         page.drawImage(img, { x: marginX, y: y - targetH + 6, width: w, height: targetH });
+        headerBlockHeight = Math.max(headerBlockHeight, targetH);
       }
     } catch {}
   }
@@ -47,6 +50,12 @@ export async function buildHoaPdfBytes(params: {
       page.drawText(line, { x: lhX, y: lhY, size: 10.5, font, color: rgb(0.18,0.18,0.18) });
       lhY -= 13;
     }
+    const letterheadHeight = 14 * lines.length;
+    headerBlockHeight = Math.max(headerBlockHeight, letterheadHeight);
+  }
+
+  if (headerBlockHeight > 0) {
+    y = top - headerBlockHeight - 18;
   }
 
   // Divider line
@@ -65,25 +74,28 @@ export async function buildHoaPdfBytes(params: {
   }
 
   // Body with wrap
-  const fontSize = 11.25
-  const lineHeight = 15;
-  const maxWidth = 612 - marginX * 2;
+  const fontSize = 11.25;
+  const lineHeight = 14.75;
+  const maxWidth = pageSize[0] - marginX * 2;
 
   const paragraphs = (params.letter || "").replace(/\r\n/g, "\n").split("\n");
   const wrapped: string[] = [];
-  for (const p of paragraphs) {
-    if (!p.trim()) { wrapped.push(""); continue; }
-    const words = p.split(/\s+/);
-    let line = "";
-    for (const w of words) {
-      const test = line ? `${line} ${w}` : w;
-      const width = font.widthOfTextAtSize(test, fontSize);
-      if (width <= maxWidth) line = test;
-      else { if (line) wrapped.push(line); line = w; }
+  paragraphs.forEach((p, idx) => {
+    if (!p.trim()) {
+      wrapped.push("");
+    } else {
+      const words = p.split(/\s+/);
+      let line = "";
+      for (const w of words) {
+        const test = line ? `${line} ${w}` : w;
+        const width = font.widthOfTextAtSize(test, fontSize);
+        if (width <= maxWidth) line = test;
+        else { if (line) wrapped.push(line); line = w; }
+      }
+      if (line) wrapped.push(line);
     }
-    if (line) wrapped.push(line);
-    wrapped.push("");
-  }
+    if (idx < paragraphs.length - 1) wrapped.push("");
+  });
 
   for (const ln of wrapped) {
     if (y < 90) {

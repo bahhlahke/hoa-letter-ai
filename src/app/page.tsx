@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import CommunitySelector from "@/components/CommunitySelector";
-import { Community, publicLogoUrl } from "@/lib/communityStore";
+import { Community } from "@/lib/communityStore";
 import { buildHoaPdfBytes } from "@/lib/pdfClient";
 
 const LETTER_TYPES = [
@@ -58,7 +58,7 @@ function consumeCreditIfAny() {
 }
 
 export default function Page() {
-  const formRef = useRef<HTMLDivElement | null>(null);
+  const formRef = useRef<HTMLElement | null>(null);
 
   // Community profile
   const [community, setCommunity] = useState<Community | null>(null);
@@ -135,31 +135,31 @@ export default function Page() {
     setLoading(true);
     setEmailStatus("");
     try {
-          const res = await fetch("/api/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              letterType,
-              violationType,
-              tone,
-              letterDate,
-              dueDate,
-              homeownerName,
-              homeownerAddress,
-              propertyAddress,
-              incidentDate,
-              amountDue,
-              appealReason,
-              subjectLine,
-              communityName: community?.name || "",
-              senderName,
-              senderTitle,
-              senderContact,
-              replyInstructions,
-              ruleRef,
-              details,
-              guidelinesText: effectiveGuidelinesText(),
-              guidelinesUrl: effectiveGuidelinesUrl(),
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          letterType,
+          violationType,
+          tone,
+          letterDate,
+          dueDate,
+          homeownerName,
+          homeownerAddress,
+          propertyAddress,
+          incidentDate,
+          amountDue,
+          appealReason,
+          subjectLine,
+          communityName: community?.name || "",
+          senderName,
+          senderTitle,
+          senderContact,
+          replyInstructions,
+          ruleRef,
+          details,
+          guidelinesText: effectiveGuidelinesText(),
+          guidelinesUrl: effectiveGuidelinesUrl(),
           letterhead: effectiveLetterhead(),
         }),
       });
@@ -338,34 +338,30 @@ export default function Page() {
 
         <section style={{ padding: "34px 0 18px" }}>
           <div className="pill">
+            <span>Brand-safe PDFs</span><span style={{ opacity: 0.7 }}>•</span>
             <span>Guideline citations</span><span style={{ opacity: 0.7 }}>•</span>
-            <span>Branded HOA PDFs</span><span style={{ opacity: 0.7 }}>•</span>
-            <span>Email delivery</span><span style={{ opacity: 0.7 }}>•</span>
-            <span>Secure Stripe checkout</span>
+            <span>Email delivery</span>
           </div>
 
-          <h1 style={{ fontSize: 54, lineHeight: 1.05, margin: "18px 0 10px" }}>
-            Draft HOA letters that sound{" "}
-            <span style={{ background: "linear-gradient(135deg, #a78bfa, #38bdf8)", WebkitBackgroundClip: "text", color: "transparent" }}>
-              calm, clear, and official
-            </span>.
+          <h1 style={{ fontSize: 48, lineHeight: 1.05, margin: "18px 0 8px" }}>
+            A calmer way to send HOA notices
           </h1>
 
-          <p className="muted" style={{ fontSize: 18, maxWidth: 860, marginTop: 0 }}>
-            Built for boards and property managers who need professional communication with guideline references—without escalating conflict.
+          <p className="muted" style={{ fontSize: 18, maxWidth: 760, marginTop: 0 }}>
+            Draft letters that reference your CC&Rs, keep a professional tone, and ship with the right branding—without juggling multiple tools.
           </p>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 18 }}>
-            <button className="button primary" onClick={scrollToForm}>Draft my notice</button>
+            <button className="button primary" onClick={scrollToForm}>Start a notice</button>
             <span className="kbd">No account required</span>
           </div>
         </section>
 
-        <section className="grid three" style={{ marginTop: 10 }}>
+        <section className="grid three" style={{ marginTop: 6 }}>
           {[
-            { t: "Auto-cite guideline sections", b: "When your CC&Rs include section numbers/titles, we cite them precisely—no guessing." },
-            { t: "HOA letter templates (PDF)", b: "Print-ready letter layout with optional logo + letterhead for credibility." },
-            { t: "Save communities", b: "Store guidelines once and reuse—perfect for boards & managers." },
+            { t: "1. Set the tone", b: "Pick the letter type + tone so the draft reads firm or friendly—your choice." },
+            { t: "2. Drop essentials", b: "Add homeowner details, dates, and rule references without hunting templates." },
+            { t: "3. Export confidently", b: "Deliver a logo-ready PDF, copy/paste text, or email directly—all from one screen." },
           ].map(x => (
             <div key={x.t} className="card" style={{ padding: 18 }}>
               <div style={{ fontWeight: 900, marginBottom: 6 }}>{x.t}</div>
@@ -374,36 +370,25 @@ export default function Page() {
           ))}
         </section>
 
-        <div className="grid two" style={{ marginTop: 18, alignItems: "start" }}>
-          <CommunitySelector onLoaded={(c, logoUrl) => {
-            setCommunity(c);
-            setCommunityLogoUrl(logoUrl);
-            // keep overrides empty unless user chooses
-            if (c) {
-              setLetterheadOverride("");
-              setGuidelinesTextExtra("");
-              setGuidelinesUrlExtra("");
-            }
-          }} />
-
-          <section id="draft" className="card">
-              <div style={{ padding: 18 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                  <div>
-                    <div style={{ fontWeight: 900, fontSize: 20 }}>Draft your notice</div>
-                  <div className="small">Pick a letter type, then add the essentials for a precise draft.</div>
-                  </div>
-                  {community?.name ? <span className="badge">Community: {community.name}</span> : <span className="badge">No community selected</span>}
+        <div className="grid two" style={{ marginTop: 18, alignItems: "start", gap: 16 }}>
+          <section id="draft" className="card" ref={formRef}>
+            <div style={{ padding: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: 20 }}>Build the notice</div>
+                  <div className="small">Complete the essentials, then add context only where needed.</div>
                 </div>
+                {community?.name ? <span className="badge">Community: {community.name}</span> : <span className="badge">Optional: add community profile</span>}
+              </div>
 
-                <div className="hr" />
+              <div className="hr" />
 
-                <div className="card" style={{ padding: 12, marginBottom: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)" }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>Reminder: draft assistance only</div>
-                  <div className="small" style={{ marginTop: 4 }}>
-                    This AI-generated letter is for drafting purposes only and is not legal advice or an official HOA notice. Always review and follow your governing documents before sending.
-                  </div>
+              <div className="card" style={{ padding: 12, marginBottom: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>Reminder: draft assistance only</div>
+                <div className="small" style={{ marginTop: 4 }}>
+                  This AI-generated letter is for drafting purposes only and is not legal advice or an official HOA notice. Always review and follow your governing documents before sending.
                 </div>
+              </div>
 
               <div className="grid two">
                 <label>
@@ -436,21 +421,17 @@ export default function Page() {
                   <input className="input" value={letterDate} onChange={(e) => setLetterDate(e.target.value)} />
                   <div className="small" style={{ marginTop: 6 }}>Defaults to today. Use the date you intend to send the notice.</div>
                 </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Rule / section cited</div>
-                  <input className="input" value={ruleRef} onChange={(e) => setRuleRef(e.target.value)} placeholder="e.g., CC&R §4.2 Parking" />
-                  <div className="small" style={{ marginTop: 6 }}>Adds authority by citing CC&Rs or bylaws—never invented by the tool.</div>
-                </label>
               </div>
 
-              <div className="grid two" style={{ marginTop: 12 }}>
+              <div className="hr" />
+              <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>Recipient & property</div>
+              <div className="grid two">
                 <label>
                   <div className="small" style={{ marginBottom: 6 }}>Homeowner name</div>
                   <input className="input" value={homeownerName} onChange={(e) => setHomeownerName(e.target.value)} placeholder="Full name" />
                 </label>
                 <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Homeowner mailing address</div>
+                  <div className="small" style={{ marginBottom: 6 }}>Mailing address</div>
                   <input className="input" value={homeownerAddress} onChange={(e) => setHomeownerAddress(e.target.value)} placeholder="Street, City, State ZIP" />
                 </label>
                 <label>
@@ -463,7 +444,47 @@ export default function Page() {
                 </label>
               </div>
 
-              <div className="grid two" style={{ marginTop: 12 }}>
+              <div className="hr" />
+              <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>Context & deadlines</div>
+              <div className="grid two">
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Violation or topic</div>
+                  <select className="input" value={violationType} onChange={(e) => setViolationType(e.target.value as any)}>
+                    {VIOLATIONS.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </label>
+
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Compliance / payment deadline</div>
+                  <input className="input" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                  <div className="small" style={{ marginTop: 6 }}>Defaults to 7 days from today.</div>
+                </label>
+
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Rule / section cited</div>
+                  <input className="input" value={ruleRef} onChange={(e) => setRuleRef(e.target.value)} placeholder="e.g., CC&R §4.2 Parking" />
+                  <div className="small" style={{ marginTop: 6 }}>Adds authority by citing CC&Rs or bylaws—never invented by the tool.</div>
+                </label>
+
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Amount due (optional)</div>
+                  <input className="input" value={amountDue} onChange={(e) => setAmountDue(e.target.value)} placeholder="$100 late dues" />
+                </label>
+
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Appeal decision / notes (optional)</div>
+                  <input className="input" value={appealReason} onChange={(e) => setAppealReason(e.target.value)} placeholder="Board response to any appeal" />
+                </label>
+
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Additional context</div>
+                  <textarea className="input" rows={3} value={details} onChange={(e) => setDetails(e.target.value)} placeholder="What happened, photo descriptions, time of day, etc." />
+                </label>
+              </div>
+
+              <div className="hr" />
+              <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>Sign-off & replies</div>
+              <div className="grid two">
                 <label>
                   <div className="small" style={{ marginBottom: 6 }}>Sender name (board/manager)</div>
                   <input className="input" value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="e.g., Jordan Smith" />
@@ -482,75 +503,36 @@ export default function Page() {
                 </label>
               </div>
 
-              <div className="grid two" style={{ marginTop: 12 }}>
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Violation or topic</div>
-                  <select className="input" value={violationType} onChange={(e) => setViolationType(e.target.value as any)}>
-                    {VIOLATIONS.map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Compliance / payment deadline</div>
-                  <input className="input" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-                  <div className="small" style={{ marginTop: 6 }}>Defaults to 7 days from today.</div>
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Amount due (optional)</div>
-                  <input className="input" value={amountDue} onChange={(e) => setAmountDue(e.target.value)} placeholder="$100 late dues" />
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Appeal reason or board response (optional)</div>
-                  <input className="input" value={appealReason} onChange={(e) => setAppealReason(e.target.value)} placeholder="Owner explanation or board decision" />
-                </label>
-              </div>
-
-              <div style={{ marginTop: 12 }}>
-                <button className="button ghost" onClick={() => setShowDetails(s => !s)}>
-                  {showDetails ? "Hide optional details" : "Add optional details"}
+              <div className="hr" />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                <div className="small" style={{ fontWeight: 800 }}>Branding & guideline extras (optional)</div>
+                <button className="button ghost" type="button" onClick={() => setShowDetails(s => !s)}>
+                  {showDetails ? "Hide" : "Show"} extras
                 </button>
-                <div className="small" style={{ marginTop: 8, color: "#cbd5e1" }}>
-                  Helpful: add specifics (dates, locations, photos referenced) so the draft cites the right rule and deadline.
-                </div>
               </div>
-
               {showDetails && (
-                <div style={{ marginTop: 12 }} className="card">
-                  <div style={{ padding: 14 }}>
-                    <label style={{ display: "block" }}>
-                      <div className="small" style={{ marginBottom: 6 }}>Specific issue or context</div>
-                      <textarea className="input" rows={4} value={details} onChange={(e) => setDetails(e.target.value)}
-                        placeholder="Example: On May 14 at approximately 10:30 PM, excessive noise was observed that could be heard from neighboring units." />
-                    </label>
-
-                    <div style={{ height: 12 }} />
-
-                    <div className="badge">Highlighted feature: Guideline citations</div>
-                    <div className="small" style={{ marginTop: 8 }}>
-                      Add extra guideline text or a URL; the notice will cite relevant sections when present.
-                    </div>
-
-                    <div style={{ height: 10 }} />
-                    <label style={{ display: "block" }}>
-                      <div className="small" style={{ marginBottom: 6 }}>Additional guideline text (optional)</div>
-                      <textarea className="input" rows={4} value={guidelinesTextExtra} onChange={(e) => setGuidelinesTextExtra(e.target.value)}
-                        placeholder="Paste any additional or relevant guideline sections here." />
-                    </label>
-
-                    <div style={{ height: 10 }} />
-                    <label style={{ display: "block" }}>
-                      <div className="small" style={{ marginBottom: 6 }}>Guidelines URL override (optional)</div>
-                      <input className="input" value={guidelinesUrlExtra} onChange={(e) => setGuidelinesUrlExtra(e.target.value)} placeholder="https://example.com/ccr" />
-                    </label>
-
-                    <div style={{ height: 10 }} />
-                    <label style={{ display: "block" }}>
-                      <div className="small" style={{ marginBottom: 6 }}>Letterhead override (optional)</div>
-                      <textarea className="input" rows={3} value={letterheadOverride} onChange={(e) => setLetterheadOverride(e.target.value)}
-                        placeholder={"Maple Ridge HOA\n123 Main St\n(555) 555-5555\nhoa@example.com"} />
-                    </label>
+                <div className="grid two" style={{ marginTop: 10 }}>
+                  <label>
+                    <div className="small" style={{ marginBottom: 6 }}>Extra guideline text</div>
+                    <textarea className="input" rows={4} value={guidelinesTextExtra} onChange={(e) => setGuidelinesTextExtra(e.target.value)} placeholder="Add temporary rules or clarifications for this notice." />
+                  </label>
+                  <label>
+                    <div className="small" style={{ marginBottom: 6 }}>Guidelines URL override</div>
+                    <input className="input" value={guidelinesUrlExtra} onChange={(e) => setGuidelinesUrlExtra(e.target.value)} placeholder="https://example.com/ccr" />
+                    <div className="small" style={{ marginTop: 6 }}>If set, replaces any saved community URL.</div>
+                  </label>
+                  <label>
+                    <div className="small" style={{ marginBottom: 6 }}>Letterhead override</div>
+                    <textarea
+                      className="input"
+                      rows={4}
+                      value={letterheadOverride}
+                      onChange={(e) => setLetterheadOverride(e.target.value)}
+                      placeholder={"Maple Ridge HOA\n123 Main St\n(555) 555-5555\nhoa@example.com"}
+                    />
+                  </label>
+                  <div className="small" style={{ marginTop: 12 }}>
+                    Saved community branding stays intact—override only when sending on behalf of a new board or building.
                   </div>
                 </div>
               )}
@@ -563,9 +545,30 @@ export default function Page() {
               </div>
             </div>
           </section>
-        </div>
 
-        <div ref={formRef} />
+          <div className="grid one" style={{ gap: 12 }}>
+            <CommunitySelector onLoaded={(c, logoUrl) => {
+              setCommunity(c);
+              setCommunityLogoUrl(logoUrl);
+              if (c) {
+                setLetterheadOverride("");
+                setGuidelinesTextExtra("");
+                setGuidelinesUrlExtra("");
+              }
+            }} />
+
+            <div className="card" style={{ padding: 16 }}>
+              <div style={{ fontWeight: 900 }}>Why teams use this</div>
+              <ul className="small" style={{ marginTop: 8, paddingLeft: 18 }}>
+                <li>One workspace for drafting, branding, and delivery.</li>
+                <li>Keep tone consistent with preset templates and reminders.</li>
+                <li>Logo-ready PDFs to print, email, or archive in minutes.</li>
+              </ul>
+              <div className="hr" />
+              <div className="muted small">Need to onboard another community? Add it above and reuse the same workflow.</div>
+            </div>
+          </div>
+        </div>
 
         {preview && (
           <section style={{ marginTop: 18 }} id="preview">
