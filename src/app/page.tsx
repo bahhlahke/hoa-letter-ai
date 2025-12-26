@@ -82,6 +82,7 @@ export default function Page() {
   const [senderName, setSenderName] = useState<string>("");
   const [senderTitle, setSenderTitle] = useState<string>("");
   const [senderContact, setSenderContact] = useState<string>("");
+  const [autoRuleFromGuidelines, setAutoRuleFromGuidelines] = useState(false);
 
   const [showDetails, setShowDetails] = useState(false);
 
@@ -187,6 +188,7 @@ export default function Page() {
           senderContact,
           replyInstructions,
           ruleRef,
+          autoRuleFromGuidelines,
           details,
           guidelinesText: effectiveGuidelinesText(),
           guidelinesUrl: effectiveGuidelinesUrl(),
@@ -491,9 +493,31 @@ export default function Page() {
               </label>
 
               <label>
-                <div className="small" style={{ marginBottom: 6 }}>Rule / section cited</div>
-                <input className="input" value={ruleRef} onChange={(e) => setRuleRef(e.target.value)} placeholder="e.g., CC&R §4.2 Parking" />
-                <div className="small" style={{ marginTop: 6 }}>Adds authority by citing CC&Rs or bylaws—never invented by the tool.</div>
+                <div className="small" style={{ marginBottom: 6 }}>Rule / section cited (optional)</div>
+                <input
+                  className="input"
+                  value={ruleRef}
+                  onChange={(e) => {
+                    setRuleRef(e.target.value);
+                    if (autoRuleFromGuidelines) setAutoRuleFromGuidelines(false);
+                  }}
+                  placeholder="e.g., CC&R §4.2 Parking"
+                  disabled={autoRuleFromGuidelines}
+                />
+                <div className="small" style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span>Leave blank or let AI cite a relevant section from your guidelines.</span>
+                  <button
+                    type="button"
+                    className="button ghost"
+                    style={{ padding: "4px 10px" }}
+                    onClick={() => {
+                      setRuleRef("");
+                      setAutoRuleFromGuidelines(s => !s);
+                    }}
+                  >
+                    {autoRuleFromGuidelines ? "Disable auto-citation" : "Ask AI to cite from guidelines"}
+                  </button>
+                </div>
               </label>
 
               <label>
