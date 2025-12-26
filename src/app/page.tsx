@@ -5,6 +5,16 @@ import CommunitySelector from "@/components/CommunitySelector";
 import { Community, publicLogoUrl } from "@/lib/communityStore";
 import { buildHoaPdfBytes } from "@/lib/pdfClient";
 
+const LETTER_TYPES = [
+  { value: "Violation notice", description: "First or follow-up warning when a rule is broken." },
+  { value: "Fine or dues delinquency", description: "Balance reminders with firm yet respectful language." },
+  { value: "Appeal response", description: "Reply to an owner’s appeal with clarity on the board’s decision." },
+  { value: "Welcome / new resident", description: "Warm intro with key community expectations and contacts." },
+  { value: "Architectural request", description: "Acknowledgement or decision for an architectural change request." },
+  { value: "Amenity or meeting notice", description: "Pool/amenity rules, meeting invites, or scheduling updates." },
+  { value: "General notice", description: "Any other HOA communication or update." },
+] as const;
+
 const VIOLATIONS = [
   "Noise",
   "Parking",
@@ -12,14 +22,25 @@ const VIOLATIONS = [
   "Landscaping",
   "Pet issue",
   "Unauthorized modification",
+  "Short-term rental",
+  "Common area use",
   "Other",
 ] as const;
 
-const TONES = ["Friendly", "Neutral", "Firm"] as const;
+const TONES = [
+  { value: "Friendly", description: "Polite and welcoming; great for welcomes and first-time reminders." },
+  { value: "Neutral", description: "Professional, balanced, and factual—recommended default." },
+  { value: "Firm", description: "Direct but respectful, emphasizing expectations and deadlines." },
+] as const;
 
 function formatDueDate(daysFromNow: number) {
   const d = new Date();
   d.setDate(d.getDate() + daysFromNow);
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+}
+
+function formatLetterDate(date?: Date) {
+  const d = date ? new Date(date) : new Date();
   return d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 }
 
@@ -44,11 +65,25 @@ export default function Page() {
   const [communityLogoUrl, setCommunityLogoUrl] = useState<string | null>(null);
 
   // Draft inputs
+  const [letterType, setLetterType] = useState<(typeof LETTER_TYPES)[number]["value"]>(LETTER_TYPES[0].value);
   const [violationType, setViolationType] = useState<(typeof VIOLATIONS)[number]>("Noise");
-  const [tone, setTone] = useState<(typeof TONES)[number]>("Neutral");
+  const [tone, setTone] = useState<(typeof TONES)[number]["value"]>("Neutral");
+  const [letterDate, setLetterDate] = useState<string>(formatLetterDate());
   const [dueDate, setDueDate] = useState<string>(formatDueDate(7));
   const [ruleRef, setRuleRef] = useState<string>("");
   const [details, setDetails] = useState<string>("");
+  const [replyInstructions, setReplyInstructions] = useState<string>("");
+  const [homeownerName, setHomeownerName] = useState<string>("");
+  const [homeownerAddress, setHomeownerAddress] = useState<string>("");
+  const [propertyAddress, setPropertyAddress] = useState<string>("");
+  const [incidentDate, setIncidentDate] = useState<string>("");
+  const [amountDue, setAmountDue] = useState<string>("");
+  const [appealReason, setAppealReason] = useState<string>("");
+  const [subjectLine, setSubjectLine] = useState<string>("");
+  const [senderName, setSenderName] = useState<string>("");
+  const [senderTitle, setSenderTitle] = useState<string>("");
+  const [senderContact, setSenderContact] = useState<string>("");
+
   const [showDetails, setShowDetails] = useState(false);
 
   // Guidelines overrides (user can add extra beyond community profile)
@@ -75,11 +110,10 @@ export default function Page() {
     if (last && !preview) setPreview(last);
   }, []);
 
-  const toneHelp = useMemo(() => ({
-    Friendly: "Warm, cooperative language. Good for first notices.",
-    Neutral: "Factual, professional, non-accusatory. Safest default.",
-    Firm: "Clear expectations and deadlines, still respectful.",
-  } as Record<(typeof TONES)[number], string>), []);
+  const toneHelp = useMemo<Record<string, string>>(
+    () => Object.fromEntries(TONES.map(t => [t.value, t.description])),
+    []
+  );
 
   function effectiveGuidelinesText() {
     const pieces = [
@@ -101,18 +135,31 @@ export default function Page() {
     setLoading(true);
     setEmailStatus("");
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          violationType,
-          tone,
-          dueDate,
-          communityName: community?.name || "",
-          ruleRef,
-          details,
-          guidelinesText: effectiveGuidelinesText(),
-          guidelinesUrl: effectiveGuidelinesUrl(),
+          const res = await fetch("/api/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              letterType,
+              violationType,
+              tone,
+              letterDate,
+              dueDate,
+              homeownerName,
+              homeownerAddress,
+              propertyAddress,
+              incidentDate,
+              amountDue,
+              appealReason,
+              subjectLine,
+              communityName: community?.name || "",
+              senderName,
+              senderTitle,
+              senderContact,
+              replyInstructions,
+              ruleRef,
+              details,
+              guidelinesText: effectiveGuidelinesText(),
+              guidelinesUrl: effectiveGuidelinesUrl(),
           letterhead: effectiveLetterhead(),
         }),
       });
@@ -298,7 +345,7 @@ export default function Page() {
           </div>
 
           <h1 style={{ fontSize: 54, lineHeight: 1.05, margin: "18px 0 10px" }}>
-            Draft HOA notices that sound{" "}
+            Draft HOA letters that sound{" "}
             <span style={{ background: "linear-gradient(135deg, #a78bfa, #38bdf8)", WebkitBackgroundClip: "text", color: "transparent" }}>
               calm, clear, and official
             </span>.
@@ -340,23 +387,31 @@ export default function Page() {
           }} />
 
           <section id="draft" className="card">
-            <div style={{ padding: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                <div>
-                  <div style={{ fontWeight: 900, fontSize: 20 }}>Draft your notice</div>
-                  <div className="small">Essentials first. Optional details only if you want.</div>
+              <div style={{ padding: 18 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: 20 }}>Draft your notice</div>
+                  <div className="small">Pick a letter type, then add the essentials for a precise draft.</div>
+                  </div>
+                  {community?.name ? <span className="badge">Community: {community.name}</span> : <span className="badge">No community selected</span>}
                 </div>
-                {community?.name ? <span className="badge">Community: {community.name}</span> : <span className="badge">No community selected</span>}
-              </div>
 
-              <div className="hr" />
+                <div className="hr" />
+
+                <div className="card" style={{ padding: 12, marginBottom: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>Reminder: draft assistance only</div>
+                  <div className="small" style={{ marginTop: 4 }}>
+                    This AI-generated letter is for drafting purposes only and is not legal advice or an official HOA notice. Always review and follow your governing documents before sending.
+                  </div>
+                </div>
 
               <div className="grid two">
                 <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Violation type</div>
-                  <select className="input" value={violationType} onChange={(e) => setViolationType(e.target.value as any)}>
-                    {VIOLATIONS.map(v => <option key={v} value={v}>{v}</option>)}
+                  <div className="small" style={{ marginBottom: 6 }}>Letter type</div>
+                  <select className="input" value={letterType} onChange={(e) => setLetterType(e.target.value as any)}>
+                    {LETTER_TYPES.map(t => <option key={t.value} value={t.value}>{t.value}</option>)}
                   </select>
+                  <div className="small" style={{ marginTop: 6 }}>{LETTER_TYPES.find(t => t.value === letterType)?.description}</div>
                 </label>
 
                 <label>
@@ -365,20 +420,90 @@ export default function Page() {
                     <span className="small" title={toneHelp[tone]}>?</span>
                   </div>
                   <select className="input" value={tone} onChange={(e) => setTone(e.target.value as any)}>
-                    {TONES.map(t => <option key={t} value={t}>{t}</option>)}
+                    {TONES.map(t => <option key={t.value} value={t.value}>{t.value}</option>)}
                   </select>
                   <div className="small" style={{ marginTop: 6 }}>{toneHelp[tone]}</div>
                 </label>
 
                 <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Due date</div>
+                  <div className="small" style={{ marginBottom: 6 }}>Subject line (optional)</div>
+                  <input className="input" value={subjectLine} onChange={(e) => setSubjectLine(e.target.value)} placeholder="e.g., Notice of Landscaping Violation" />
+                  <div className="small" style={{ marginTop: 6 }}>Used in the letter heading/RE: line.</div>
+                </label>
+
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Letter date</div>
+                  <input className="input" value={letterDate} onChange={(e) => setLetterDate(e.target.value)} />
+                  <div className="small" style={{ marginTop: 6 }}>Defaults to today. Use the date you intend to send the notice.</div>
+                </label>
+
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Rule / section cited</div>
+                  <input className="input" value={ruleRef} onChange={(e) => setRuleRef(e.target.value)} placeholder="e.g., CC&R §4.2 Parking" />
+                  <div className="small" style={{ marginTop: 6 }}>Adds authority by citing CC&Rs or bylaws—never invented by the tool.</div>
+                </label>
+              </div>
+
+              <div className="grid two" style={{ marginTop: 12 }}>
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Homeowner name</div>
+                  <input className="input" value={homeownerName} onChange={(e) => setHomeownerName(e.target.value)} placeholder="Full name" />
+                </label>
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Homeowner mailing address</div>
+                  <input className="input" value={homeownerAddress} onChange={(e) => setHomeownerAddress(e.target.value)} placeholder="Street, City, State ZIP" />
+                </label>
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Property address (if different)</div>
+                  <input className="input" value={propertyAddress} onChange={(e) => setPropertyAddress(e.target.value)} placeholder="Service/lot address" />
+                </label>
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Incident or notice date</div>
+                  <input className="input" value={incidentDate} onChange={(e) => setIncidentDate(e.target.value)} placeholder="e.g., May 14, 2024" />
+                </label>
+              </div>
+
+              <div className="grid two" style={{ marginTop: 12 }}>
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Sender name (board/manager)</div>
+                  <input className="input" value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="e.g., Jordan Smith" />
+                </label>
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Sender title</div>
+                  <input className="input" value={senderTitle} onChange={(e) => setSenderTitle(e.target.value)} placeholder="Board Secretary, Community Manager" />
+                </label>
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Contact for questions</div>
+                  <input className="input" value={senderContact} onChange={(e) => setSenderContact(e.target.value)} placeholder="phone/email for replies" />
+                </label>
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Reply instructions (optional)</div>
+                  <input className="input" value={replyInstructions} onChange={(e) => setReplyInstructions(e.target.value)} placeholder="How the homeowner should respond or appeal" />
+                </label>
+              </div>
+
+              <div className="grid two" style={{ marginTop: 12 }}>
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Violation or topic</div>
+                  <select className="input" value={violationType} onChange={(e) => setViolationType(e.target.value as any)}>
+                    {VIOLATIONS.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </label>
+
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Compliance / payment deadline</div>
                   <input className="input" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
                   <div className="small" style={{ marginTop: 6 }}>Defaults to 7 days from today.</div>
                 </label>
 
                 <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Rule reference (optional)</div>
-                  <input className="input" value={ruleRef} onChange={(e) => setRuleRef(e.target.value)} placeholder="e.g., CC&R §4.2 Parking" />
+                  <div className="small" style={{ marginBottom: 6 }}>Amount due (optional)</div>
+                  <input className="input" value={amountDue} onChange={(e) => setAmountDue(e.target.value)} placeholder="$100 late dues" />
+                </label>
+
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Appeal reason or board response (optional)</div>
+                  <input className="input" value={appealReason} onChange={(e) => setAppealReason(e.target.value)} placeholder="Owner explanation or board decision" />
                 </label>
               </div>
 
@@ -386,13 +511,16 @@ export default function Page() {
                 <button className="button ghost" onClick={() => setShowDetails(s => !s)}>
                   {showDetails ? "Hide optional details" : "Add optional details"}
                 </button>
+                <div className="small" style={{ marginTop: 8, color: "#cbd5e1" }}>
+                  Helpful: add specifics (dates, locations, photos referenced) so the draft cites the right rule and deadline.
+                </div>
               </div>
 
               {showDetails && (
                 <div style={{ marginTop: 12 }} className="card">
                   <div style={{ padding: 14 }}>
                     <label style={{ display: "block" }}>
-                      <div className="small" style={{ marginBottom: 6 }}>Details (optional)</div>
+                      <div className="small" style={{ marginBottom: 6 }}>Specific issue or context</div>
                       <textarea className="input" rows={4} value={details} onChange={(e) => setDetails(e.target.value)}
                         placeholder="Example: On May 14 at approximately 10:30 PM, excessive noise was observed that could be heard from neighboring units." />
                     </label>
