@@ -403,13 +403,13 @@ export default function Page() {
 
         <section id="draft" className="card" ref={formRef} style={{ marginTop: 18 }}>
           <div style={{ padding: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                <div>
-                  <div style={{ fontWeight: 900, fontSize: 20 }}>Build the notice</div>
-                  <div className="small">Complete the essentials, then add context only where needed.</div>
-                </div>
-                {community?.name ? <span className="badge">Community: {community.name}</span> : <span className="badge">Optional: saved profiles auto-load</span>}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontWeight: 900, fontSize: 20 }}>Build the notice</div>
+                <div className="small">Complete the essentials, then add context only where needed.</div>
               </div>
+              {community?.name ? <span className="badge">Community: {community.name}</span> : <span className="badge">Optional: saved profiles auto-load</span>}
+            </div>
 
             <div className="hr" />
 
@@ -420,159 +420,158 @@ export default function Page() {
               </div>
             </div>
 
-              <div className="grid two">
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Letter type</div>
-                  <select className="input" value={letterType} onChange={(e) => setLetterType(e.target.value as any)}>
-                    {LETTER_TYPES.map(t => <option key={t.value} value={t.value}>{t.value}</option>)}
-                  </select>
-                  <div className="small" style={{ marginTop: 6 }}>{LETTER_TYPES.find(t => t.value === letterType)?.description}</div>
-                </label>
+            <div className="grid two">
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Letter type</div>
+                <select className="input" value={letterType} onChange={(e) => setLetterType(e.target.value as any)}>
+                  {LETTER_TYPES.map(t => <option key={t.value} value={t.value}>{t.value}</option>)}
+                </select>
+                <div className="small" style={{ marginTop: 6 }}>{LETTER_TYPES.find(t => t.value === letterType)?.description}</div>
+              </label>
 
-                <label>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <span className="small">Tone</span>
-                    <span className="small" title={toneHelp[tone]}>?</span>
-                  </div>
-                  <select className="input" value={tone} onChange={(e) => setTone(e.target.value as any)}>
-                    {TONES.map(t => <option key={t.value} value={t.value}>{t.value}</option>)}
-                  </select>
-                  <div className="small" style={{ marginTop: 6 }}>{toneHelp[tone]}</div>
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Subject line (optional)</div>
-                  <input className="input" value={subjectLine} onChange={(e) => setSubjectLine(e.target.value)} placeholder="e.g., Notice of Landscaping Violation" />
-                  <div className="small" style={{ marginTop: 6 }}>Used in the letter heading/RE: line.</div>
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Letter date</div>
-                  <input className="input" value={letterDate} onChange={(e) => setLetterDate(e.target.value)} />
-                  <div className="small" style={{ marginTop: 6 }}>Defaults to today. Use the date you intend to send the notice.</div>
-                </label>
-              </div>
-
-              <div className="hr" />
-              <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>Recipient & property</div>
-              <div className="grid two">
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Homeowner name</div>
-                  <input className="input" value={homeownerName} onChange={(e) => setHomeownerName(e.target.value)} placeholder="Full name" />
-                </label>
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Mailing address</div>
-                  <input className="input" value={homeownerAddress} onChange={(e) => setHomeownerAddress(e.target.value)} placeholder="Street, City, State ZIP" />
-                </label>
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Property address (if different)</div>
-                  <input className="input" value={propertyAddress} onChange={(e) => setPropertyAddress(e.target.value)} placeholder="Service/lot address" />
-                </label>
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Incident or notice date</div>
-                  <input className="input" value={incidentDate} onChange={(e) => setIncidentDate(e.target.value)} placeholder="e.g., May 14, 2024" />
-                </label>
-              </div>
-
-              <div className="hr" />
-              <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>Context & deadlines</div>
-              <div className="grid two">
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Violation or topic</div>
-                  <select className="input" value={violationType} onChange={(e) => setViolationType(e.target.value as any)}>
-                    {VIOLATIONS.map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Compliance / payment deadline</div>
-                  <input className="input" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-                  <div className="small" style={{ marginTop: 6 }}>Defaults to 7 days from today.</div>
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Rule / section cited</div>
-                  <input className="input" value={ruleRef} onChange={(e) => setRuleRef(e.target.value)} placeholder="e.g., CC&R §4.2 Parking" />
-                  <div className="small" style={{ marginTop: 6 }}>Adds authority by citing CC&Rs or bylaws—never invented by the tool.</div>
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Amount due (optional)</div>
-                  <input className="input" value={amountDue} onChange={(e) => setAmountDue(e.target.value)} placeholder="$100 late dues" />
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Appeal decision / notes (optional)</div>
-                  <input className="input" value={appealReason} onChange={(e) => setAppealReason(e.target.value)} placeholder="Board response to any appeal" />
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Additional context</div>
-                  <textarea className="input" rows={3} value={details} onChange={(e) => setDetails(e.target.value)} placeholder="What happened, photo descriptions, time of day, etc." />
-                </label>
-              </div>
-
-              <div className="hr" />
-              <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>Sign-off & replies</div>
-              <div className="grid two">
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Sender name (board/manager)</div>
-                  <input className="input" value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="e.g., Jordan Smith" />
-                </label>
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Sender title</div>
-                  <input className="input" value={senderTitle} onChange={(e) => setSenderTitle(e.target.value)} placeholder="Board Secretary, Community Manager" />
-                </label>
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Contact for questions</div>
-                  <input className="input" value={senderContact} onChange={(e) => setSenderContact(e.target.value)} placeholder="phone/email for replies" />
-                </label>
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Reply instructions (optional)</div>
-                  <input className="input" value={replyInstructions} onChange={(e) => setReplyInstructions(e.target.value)} placeholder="How the homeowner should respond or appeal" />
-                </label>
-              </div>
-
-              <div className="hr" />
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                <div className="small" style={{ fontWeight: 800 }}>Branding & guideline extras (optional)</div>
-                <button className="button ghost" type="button" onClick={() => setShowDetails(s => !s)}>
-                  {showDetails ? "Hide" : "Show"} extras
-                </button>
-              </div>
-              {showDetails && (
-                <div className="grid two" style={{ marginTop: 10 }}>
-                  <label>
-                    <div className="small" style={{ marginBottom: 6 }}>Extra guideline text</div>
-                    <textarea className="input" rows={4} value={guidelinesTextExtra} onChange={(e) => setGuidelinesTextExtra(e.target.value)} placeholder="Add temporary rules or clarifications for this notice." />
-                  </label>
-                  <label>
-                    <div className="small" style={{ marginBottom: 6 }}>Guidelines URL override</div>
-                    <input className="input" value={guidelinesUrlExtra} onChange={(e) => setGuidelinesUrlExtra(e.target.value)} placeholder="https://example.com/ccr" />
-                    <div className="small" style={{ marginTop: 6 }}>If set, replaces any saved community URL.</div>
-                  </label>
-                  <label>
-                    <div className="small" style={{ marginBottom: 6 }}>Letterhead override</div>
-                    <textarea
-                      className="input"
-                      rows={4}
-                      value={letterheadOverride}
-                      onChange={(e) => setLetterheadOverride(e.target.value)}
-                      placeholder={"Maple Ridge HOA\n123 Main St\n(555) 555-5555\nhoa@example.com"}
-                    />
-                  </label>
-                  <div className="small" style={{ marginTop: 12 }}>
-                    Saved community branding stays intact—override only when sending on behalf of a new board or building.
-                  </div>
+              <label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span className="small">Tone</span>
+                  <span className="small" title={toneHelp[tone]}>?</span>
                 </div>
-              )}
+                <select className="input" value={tone} onChange={(e) => setTone(e.target.value as any)}>
+                  {TONES.map(t => <option key={t.value} value={t.value}>{t.value}</option>)}
+                </select>
+                <div className="small" style={{ marginTop: 6 }}>{toneHelp[tone]}</div>
+              </label>
 
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 14 }}>
-                <button className="button primary" onClick={generatePreview} disabled={loading}>
-                  {loading ? "Drafting…" : "Create professional notice"}
-                </button>
-                <button className="button" onClick={() => setDueDate(formatDueDate(7))} disabled={loading}>Reset due date</button>
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Subject line (optional)</div>
+                <input className="input" value={subjectLine} onChange={(e) => setSubjectLine(e.target.value)} placeholder="e.g., Notice of Landscaping Violation" />
+                <div className="small" style={{ marginTop: 6 }}>Used in the letter heading/RE: line.</div>
+              </label>
+
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Letter date</div>
+                <input className="input" value={letterDate} onChange={(e) => setLetterDate(e.target.value)} />
+                <div className="small" style={{ marginTop: 6 }}>Defaults to today. Use the date you intend to send the notice.</div>
+              </label>
+            </div>
+
+            <div className="hr" />
+            <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>Recipient & property</div>
+            <div className="grid two">
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Homeowner name</div>
+                <input className="input" value={homeownerName} onChange={(e) => setHomeownerName(e.target.value)} placeholder="Full name" />
+              </label>
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Mailing address</div>
+                <input className="input" value={homeownerAddress} onChange={(e) => setHomeownerAddress(e.target.value)} placeholder="Street, City, State ZIP" />
+              </label>
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Property address (if different)</div>
+                <input className="input" value={propertyAddress} onChange={(e) => setPropertyAddress(e.target.value)} placeholder="Service/lot address" />
+              </label>
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Incident or notice date</div>
+                <input className="input" value={incidentDate} onChange={(e) => setIncidentDate(e.target.value)} placeholder="e.g., May 14, 2024" />
+              </label>
+            </div>
+
+            <div className="hr" />
+            <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>Context & deadlines</div>
+            <div className="grid two">
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Violation or topic</div>
+                <select className="input" value={violationType} onChange={(e) => setViolationType(e.target.value as any)}>
+                  {VIOLATIONS.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </label>
+
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Compliance / payment deadline</div>
+                <input className="input" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                <div className="small" style={{ marginTop: 6 }}>Defaults to 7 days from today.</div>
+              </label>
+
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Rule / section cited</div>
+                <input className="input" value={ruleRef} onChange={(e) => setRuleRef(e.target.value)} placeholder="e.g., CC&R §4.2 Parking" />
+                <div className="small" style={{ marginTop: 6 }}>Adds authority by citing CC&Rs or bylaws—never invented by the tool.</div>
+              </label>
+
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Amount due (optional)</div>
+                <input className="input" value={amountDue} onChange={(e) => setAmountDue(e.target.value)} placeholder="$100 late dues" />
+              </label>
+
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Appeal decision / notes (optional)</div>
+                <input className="input" value={appealReason} onChange={(e) => setAppealReason(e.target.value)} placeholder="Board response to any appeal" />
+              </label>
+
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Additional context</div>
+                <textarea className="input" rows={3} value={details} onChange={(e) => setDetails(e.target.value)} placeholder="What happened, photo descriptions, time of day, etc." />
+              </label>
+            </div>
+
+            <div className="hr" />
+            <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>Sign-off & replies</div>
+            <div className="grid two">
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Sender name (board/manager)</div>
+                <input className="input" value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="e.g., Jordan Smith" />
+              </label>
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Sender title</div>
+                <input className="input" value={senderTitle} onChange={(e) => setSenderTitle(e.target.value)} placeholder="Board Secretary, Community Manager" />
+              </label>
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Contact for questions</div>
+                <input className="input" value={senderContact} onChange={(e) => setSenderContact(e.target.value)} placeholder="phone/email for replies" />
+              </label>
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Reply instructions (optional)</div>
+                <input className="input" value={replyInstructions} onChange={(e) => setReplyInstructions(e.target.value)} placeholder="How the homeowner should respond or appeal" />
+              </label>
+            </div>
+
+            <div className="hr" />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              <div className="small" style={{ fontWeight: 800 }}>Branding & guideline extras (optional)</div>
+              <button className="button ghost" type="button" onClick={() => setShowDetails(s => !s)}>
+                {showDetails ? "Hide" : "Show"} extras
+              </button>
+            </div>
+            {showDetails && (
+              <div className="grid two" style={{ marginTop: 10 }}>
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Extra guideline text</div>
+                  <textarea className="input" rows={4} value={guidelinesTextExtra} onChange={(e) => setGuidelinesTextExtra(e.target.value)} placeholder="Add temporary rules or clarifications for this notice." />
+                </label>
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Guidelines URL override</div>
+                  <input className="input" value={guidelinesUrlExtra} onChange={(e) => setGuidelinesUrlExtra(e.target.value)} placeholder="https://example.com/ccr" />
+                  <div className="small" style={{ marginTop: 6 }}>If set, replaces any saved community URL.</div>
+                </label>
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Letterhead override</div>
+                  <textarea
+                    className="input"
+                    rows={4}
+                    value={letterheadOverride}
+                    onChange={(e) => setLetterheadOverride(e.target.value)}
+                    placeholder={"Maple Ridge HOA\n123 Main St\n(555) 555-5555\nhoa@example.com"}
+                  />
+                </label>
+                <div className="small" style={{ marginTop: 12 }}>
+                  Saved community branding stays intact—override only when sending on behalf of a new board or building.
+                </div>
               </div>
+            )}
+
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 14 }}>
+              <button className="button primary" onClick={generatePreview} disabled={loading}>
+                {loading ? "Drafting…" : "Create professional notice"}
+              </button>
+              <button className="button" onClick={() => setDueDate(formatDueDate(7))} disabled={loading}>Reset due date</button>
             </div>
           </div>
         </section>
