@@ -15,10 +15,23 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
+    const letterType = safeStr(body.letterType, 64) || "General notice";
     const violationType = safeStr(body.violationType, 64) || "Other";
     const tone = safeStr(body.tone, 32) || "Neutral";
-    const dueDate = safeStr(body.dueDate, 80);
+    const letterDate = safeStr(body.letterDate, 120) || new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    const dueDate = safeStr(body.dueDate, 120);
+    const homeownerName = safeStr(body.homeownerName, 120);
+    const homeownerAddress = safeStr(body.homeownerAddress, 240);
+    const propertyAddress = safeStr(body.propertyAddress, 240);
+    const incidentDate = safeStr(body.incidentDate, 120);
+    const amountDue = safeStr(body.amountDue, 120);
+    const appealReason = safeStr(body.appealReason, 400);
+    const subjectLine = safeStr(body.subjectLine, 200);
     const communityName = safeStr(body.communityName, 120);
+    const senderName = safeStr(body.senderName, 120);
+    const senderTitle = safeStr(body.senderTitle, 120);
+    const senderContact = safeStr(body.senderContact, 200);
+    const replyInstructions = safeStr(body.replyInstructions, 400);
     const ruleRef = safeStr(body.ruleRef, 180);
     const details = safeStr(body.details, 1000);
 
@@ -35,23 +48,38 @@ export async function POST(req: Request) {
     }
 
     const system = [
-      "You draft professional HOA violation notices.",
+      "You draft professional HOA letters across multiple categories (violation notice, delinquency, appeal response, welcome, architectural request, and general notices).",
       "If guidelines contain section numbers/titles/headings, cite the EXACT relevant section(s) verbatim by identifier (e.g., 'Section 4.2 (Parking)').",
       "Never invent or guess section numbers.",
       "Tone must be non-accusatory, factual, and respectful.",
       "No legal advice. Do not threaten fines/legal action unless explicitly stated in the provided details/guidelines.",
-      "Keep it under 250 words.",
-      "Output only the letter body text."
+      "Keep it under 300 words.",
+      "Format like an official letter: letterhead (if provided), date, recipient block, subject/RE line, salutation, organized paragraphs, and a polite closing + signature placeholder.",
+      "When sender name/title/contact are provided, include them in the closing block to make replying easy.",
+      "Use the provided letter date; if absent, use today's date in a friendly format (e.g., May 1, 2024).",
+      "Use solution-focused wording even for violation or delinquency topics."
     ].join("\n");
 
-    const user = `Create an HOA notice.
+    const user = `Create an HOA ${letterType}.
 
 Community: ${communityName || "(not provided)"}
-Violation type: ${violationType}
+Violation/Topic: ${violationType}
 Tone: ${tone}
-Due date: ${dueDate || "(not provided)"}
+Letter date: ${letterDate}
+Subject/RE line: ${subjectLine || "(not provided)"}
+Homeowner name: ${homeownerName || "(not provided)"}
+Homeowner mailing address: ${homeownerAddress || "(not provided)"}
+Property address: ${propertyAddress || "(not provided)"}
+Incident/notice date: ${incidentDate || "(not provided)"}
+Compliance/payment deadline: ${dueDate || "(not provided)"}
+Amount due: ${amountDue || "(not provided)"}
+Appeal reason/decision: ${appealReason || "(not provided)"}
+Sender name: ${senderName || "(not provided)"}
+Sender title: ${senderTitle || "(not provided)"}
+Sender contact: ${senderContact || "(not provided)"}
+Reply instructions for homeowner: ${replyInstructions || "(not provided)"}
 Rule reference: ${ruleRef || "(not provided)"}
-Details: ${details || "(none)"}
+Details/context: ${details || "(none)"}
 
 Guidelines (pasted):
 ${guidelinesText || "(none)"}
@@ -59,7 +87,7 @@ ${guidelinesText || "(none)"}
 Guidelines (from URL):
 ${fetchedGuidelines || "(none)"}
 
-If guidelines are present, add 1-2 short citations like:
+If guidelines or rule references are present, add 1-2 short citations like:
 "Per Section X (Title)..."
 `;
 
