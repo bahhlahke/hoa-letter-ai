@@ -260,7 +260,8 @@ async function downloadPdf() {
   }
 
   const bytes = await pdfDoc.save();
-  const blob = new Blob([bytes.buffer], { type: "application/pdf" });
+  const buffer = bytes.buffer.slice(0) as ArrayBuffer;
+  const blob = new Blob([buffer], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
