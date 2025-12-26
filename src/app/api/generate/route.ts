@@ -33,6 +33,7 @@ export async function POST(req: Request) {
     const senderContact = safeStr(body.senderContact, 200);
     const replyInstructions = safeStr(body.replyInstructions, 400);
     const ruleRef = safeStr(body.ruleRef, 180);
+    const autoRuleFromGuidelines = Boolean(body.autoRuleFromGuidelines);
     const details = safeStr(body.details, 1000);
 
     const guidelinesText = safeStr(body.guidelinesText, 5000);
@@ -50,6 +51,7 @@ export async function POST(req: Request) {
     const system = [
       "You draft professional HOA letters across multiple categories (violation notice, delinquency, appeal response, welcome, architectural request, and general notices).",
       "If guidelines contain section numbers/titles/headings, cite the EXACT relevant section(s) verbatim by identifier (e.g., 'Section 4.2 (Parking)').",
+      "If the rule reference is requested automatically, pick the single most relevant section from the provided guidelines text or URL without inventing identifiers. If none apply, state that no specific section was provided.",
       "Never invent or guess section numbers.",
       "Tone must be non-accusatory, factual, and respectful.",
       "No legal advice. Do not threaten fines/legal action unless explicitly stated in the provided details/guidelines.",
@@ -78,7 +80,7 @@ Sender name: ${senderName || "(not provided)"}
 Sender title: ${senderTitle || "(not provided)"}
 Sender contact: ${senderContact || "(not provided)"}
 Reply instructions for homeowner: ${replyInstructions || "(not provided)"}
-Rule reference: ${ruleRef || "(not provided)"}
+Rule reference: ${ruleRef || (autoRuleFromGuidelines ? "(auto-select from guidelines)" : "(not provided)")}
 Details/context: ${details || "(none)"}
 
 Guidelines (pasted):
@@ -86,6 +88,8 @@ ${guidelinesText || "(none)"}
 
 Guidelines (from URL):
 ${fetchedGuidelines || "(none)"}
+
+Auto-select rule reference from guidelines: ${autoRuleFromGuidelines ? "Yes—choose the best matching section and cite it" : "No"}
 
 If guidelines or rule references are present, add 1-2 short citations like:
 "Per Section X (Title)..."

@@ -27,6 +27,11 @@ export default function CommunitySelector(props: {
   useEffect(() => { refresh().catch(console.error); }, []);
 
   useEffect(() => {
+    const lastId = localStorage.getItem("hoa_last_community_id");
+    if (lastId) setSelectedId(lastId);
+  }, []);
+
+  useEffect(() => {
     const c = communities.find(x => x.id === selectedId) || null;
     setGuidelines(c?.guidelines || "");
     setGuidelinesUrl(c?.guidelines_url || "");
@@ -34,6 +39,10 @@ export default function CommunitySelector(props: {
     setLogoPath(c?.logo_path || null);
     props.onLoaded(c, c ? publicLogoUrl(c.logo_path) : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (selectedId) localStorage.setItem("hoa_last_community_id", selectedId);
   }, [selectedId]);
 
   async function onCreate() {

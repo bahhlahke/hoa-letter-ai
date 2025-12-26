@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import CommunitySelector from "@/components/CommunitySelector";
-import { Community } from "@/lib/communityStore";
+import { Community, getCommunity, publicLogoUrl } from "@/lib/communityStore";
 import { buildHoaPdfBytes } from "@/lib/pdfClient";
 
 const LETTER_TYPES = [
@@ -83,6 +82,7 @@ export default function Page() {
   const [senderName, setSenderName] = useState<string>("");
   const [senderTitle, setSenderTitle] = useState<string>("");
   const [senderContact, setSenderContact] = useState<string>("");
+  const [autoRuleFromGuidelines, setAutoRuleFromGuidelines] = useState(false);
 
   const [showDetails, setShowDetails] = useState(false);
 
@@ -101,6 +101,8 @@ export default function Page() {
   const [emailTo, setEmailTo] = useState<string>("");
   const [emailStatus, setEmailStatus] = useState<string>("");
 
+  const [communityLoading, setCommunityLoading] = useState(false);
+
   useEffect(() => {
     const s = getUnlockState();
     setUnlocked(s.unlocked);
@@ -108,6 +110,8 @@ export default function Page() {
 
     const last = localStorage.getItem("hoa_last_letter");
     if (last && !preview) setPreview(last);
+    const lastCommunityId = localStorage.getItem("hoa_last_community_id");
+    if (lastCommunityId) hydrateCommunity(lastCommunityId).catch(console.error);
   }, []);
 
   const toneHelp = useMemo<Record<string, string>>(
@@ -129,6 +133,33 @@ export default function Page() {
 
   function effectiveLetterhead() {
     return (letterheadOverride || community?.letterhead || "").trim();
+  }
+
+  async function hydrateCommunity(id: string) {
+    setCommunityLoading(true);
+    try {
+      const c = await getCommunity(id);
+      if (c) {
+        setCommunity(c);
+        setCommunityLogoUrl(publicLogoUrl(c.logo_path));
+        setLetterheadOverride("");
+        setGuidelinesTextExtra("");
+        setGuidelinesUrlExtra("");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCommunityLoading(false);
+    }
+  }
+
+  function refreshLastCommunity() {
+    const lastCommunityId = localStorage.getItem("hoa_last_community_id");
+    if (!lastCommunityId) {
+      alert("No saved community profile yet.");
+      return;
+    }
+    hydrateCommunity(lastCommunityId);
   }
 
   async function generatePreview() {
@@ -157,6 +188,7 @@ export default function Page() {
           senderContact,
           replyInstructions,
           ruleRef,
+          autoRuleFromGuidelines,
           details,
           guidelinesText: effectiveGuidelinesText(),
           guidelinesUrl: effectiveGuidelinesUrl(),
@@ -321,8 +353,8 @@ export default function Page() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
               width: 38, height: 38, borderRadius: 12,
-              background: "linear-gradient(135deg, rgba(124,58,237,0.95), rgba(14,165,233,0.85))",
-              border: "1px solid rgba(255,255,255,0.18)"
+              background: "linear-gradient(135deg, #6366f1, #22c55e)",
+              border: "1px solid rgba(99,102,241,0.15)"
             }} />
             <div>
               <div style={{ fontWeight: 900, letterSpacing: 0.2 }}>HOA Letter AI</div>
@@ -331,6 +363,7 @@ export default function Page() {
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <a className="button ghost" href="/community" style={{ textDecoration: "none" }}>Community profiles</a>
             <a className="button ghost" href="/pricing" style={{ textDecoration: "none" }}>Pricing</a>
             <a className="button ghost" href="#draft" style={{ textDecoration: "none" }}>Draft</a>
           </div>
@@ -370,205 +403,231 @@ export default function Page() {
           ))}
         </section>
 
-        <div className="grid two" style={{ marginTop: 18, alignItems: "start", gap: 16 }}>
-          <section id="draft" className="card" ref={formRef}>
-            <div style={{ padding: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                <div>
-                  <div style={{ fontWeight: 900, fontSize: 20 }}>Build the notice</div>
-                  <div className="small">Complete the essentials, then add context only where needed.</div>
-                </div>
-                {community?.name ? <span className="badge">Community: {community.name}</span> : <span className="badge">Optional: add community profile</span>}
+        <section id="draft" className="card" ref={formRef} style={{ marginTop: 18 }}>
+          <div style={{ padding: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontWeight: 900, fontSize: 20 }}>Build the notice</div>
+                <div className="small">Complete the essentials, then add context only where needed.</div>
               </div>
+              {community?.name ? <span className="badge">Community: {community.name}</span> : <span className="badge">Optional: saved profiles auto-load</span>}
+            </div>
 
-              <div className="hr" />
+            <div className="hr" />
 
-              <div className="card" style={{ padding: 12, marginBottom: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)" }}>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>Reminder: draft assistance only</div>
-                <div className="small" style={{ marginTop: 4 }}>
-                  This AI-generated letter is for drafting purposes only and is not legal advice or an official HOA notice. Always review and follow your governing documents before sending.
-                </div>
-              </div>
-
-              <div className="grid two">
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Letter type</div>
-                  <select className="input" value={letterType} onChange={(e) => setLetterType(e.target.value as any)}>
-                    {LETTER_TYPES.map(t => <option key={t.value} value={t.value}>{t.value}</option>)}
-                  </select>
-                  <div className="small" style={{ marginTop: 6 }}>{LETTER_TYPES.find(t => t.value === letterType)?.description}</div>
-                </label>
-
-                <label>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <span className="small">Tone</span>
-                    <span className="small" title={toneHelp[tone]}>?</span>
-                  </div>
-                  <select className="input" value={tone} onChange={(e) => setTone(e.target.value as any)}>
-                    {TONES.map(t => <option key={t.value} value={t.value}>{t.value}</option>)}
-                  </select>
-                  <div className="small" style={{ marginTop: 6 }}>{toneHelp[tone]}</div>
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Subject line (optional)</div>
-                  <input className="input" value={subjectLine} onChange={(e) => setSubjectLine(e.target.value)} placeholder="e.g., Notice of Landscaping Violation" />
-                  <div className="small" style={{ marginTop: 6 }}>Used in the letter heading/RE: line.</div>
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Letter date</div>
-                  <input className="input" value={letterDate} onChange={(e) => setLetterDate(e.target.value)} />
-                  <div className="small" style={{ marginTop: 6 }}>Defaults to today. Use the date you intend to send the notice.</div>
-                </label>
-              </div>
-
-              <div className="hr" />
-              <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>Recipient & property</div>
-              <div className="grid two">
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Homeowner name</div>
-                  <input className="input" value={homeownerName} onChange={(e) => setHomeownerName(e.target.value)} placeholder="Full name" />
-                </label>
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Mailing address</div>
-                  <input className="input" value={homeownerAddress} onChange={(e) => setHomeownerAddress(e.target.value)} placeholder="Street, City, State ZIP" />
-                </label>
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Property address (if different)</div>
-                  <input className="input" value={propertyAddress} onChange={(e) => setPropertyAddress(e.target.value)} placeholder="Service/lot address" />
-                </label>
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Incident or notice date</div>
-                  <input className="input" value={incidentDate} onChange={(e) => setIncidentDate(e.target.value)} placeholder="e.g., May 14, 2024" />
-                </label>
-              </div>
-
-              <div className="hr" />
-              <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>Context & deadlines</div>
-              <div className="grid two">
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Violation or topic</div>
-                  <select className="input" value={violationType} onChange={(e) => setViolationType(e.target.value as any)}>
-                    {VIOLATIONS.map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Compliance / payment deadline</div>
-                  <input className="input" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-                  <div className="small" style={{ marginTop: 6 }}>Defaults to 7 days from today.</div>
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Rule / section cited</div>
-                  <input className="input" value={ruleRef} onChange={(e) => setRuleRef(e.target.value)} placeholder="e.g., CC&R §4.2 Parking" />
-                  <div className="small" style={{ marginTop: 6 }}>Adds authority by citing CC&Rs or bylaws—never invented by the tool.</div>
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Amount due (optional)</div>
-                  <input className="input" value={amountDue} onChange={(e) => setAmountDue(e.target.value)} placeholder="$100 late dues" />
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Appeal decision / notes (optional)</div>
-                  <input className="input" value={appealReason} onChange={(e) => setAppealReason(e.target.value)} placeholder="Board response to any appeal" />
-                </label>
-
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Additional context</div>
-                  <textarea className="input" rows={3} value={details} onChange={(e) => setDetails(e.target.value)} placeholder="What happened, photo descriptions, time of day, etc." />
-                </label>
-              </div>
-
-              <div className="hr" />
-              <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>Sign-off & replies</div>
-              <div className="grid two">
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Sender name (board/manager)</div>
-                  <input className="input" value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="e.g., Jordan Smith" />
-                </label>
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Sender title</div>
-                  <input className="input" value={senderTitle} onChange={(e) => setSenderTitle(e.target.value)} placeholder="Board Secretary, Community Manager" />
-                </label>
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Contact for questions</div>
-                  <input className="input" value={senderContact} onChange={(e) => setSenderContact(e.target.value)} placeholder="phone/email for replies" />
-                </label>
-                <label>
-                  <div className="small" style={{ marginBottom: 6 }}>Reply instructions (optional)</div>
-                  <input className="input" value={replyInstructions} onChange={(e) => setReplyInstructions(e.target.value)} placeholder="How the homeowner should respond or appeal" />
-                </label>
-              </div>
-
-              <div className="hr" />
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                <div className="small" style={{ fontWeight: 800 }}>Branding & guideline extras (optional)</div>
-                <button className="button ghost" type="button" onClick={() => setShowDetails(s => !s)}>
-                  {showDetails ? "Hide" : "Show"} extras
-                </button>
-              </div>
-              {showDetails && (
-                <div className="grid two" style={{ marginTop: 10 }}>
-                  <label>
-                    <div className="small" style={{ marginBottom: 6 }}>Extra guideline text</div>
-                    <textarea className="input" rows={4} value={guidelinesTextExtra} onChange={(e) => setGuidelinesTextExtra(e.target.value)} placeholder="Add temporary rules or clarifications for this notice." />
-                  </label>
-                  <label>
-                    <div className="small" style={{ marginBottom: 6 }}>Guidelines URL override</div>
-                    <input className="input" value={guidelinesUrlExtra} onChange={(e) => setGuidelinesUrlExtra(e.target.value)} placeholder="https://example.com/ccr" />
-                    <div className="small" style={{ marginTop: 6 }}>If set, replaces any saved community URL.</div>
-                  </label>
-                  <label>
-                    <div className="small" style={{ marginBottom: 6 }}>Letterhead override</div>
-                    <textarea
-                      className="input"
-                      rows={4}
-                      value={letterheadOverride}
-                      onChange={(e) => setLetterheadOverride(e.target.value)}
-                      placeholder={"Maple Ridge HOA\n123 Main St\n(555) 555-5555\nhoa@example.com"}
-                    />
-                  </label>
-                  <div className="small" style={{ marginTop: 12 }}>
-                    Saved community branding stays intact—override only when sending on behalf of a new board or building.
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 14 }}>
-                <button className="button primary" onClick={generatePreview} disabled={loading}>
-                  {loading ? "Drafting…" : "Create professional notice"}
-                </button>
-                <button className="button" onClick={() => setDueDate(formatDueDate(7))} disabled={loading}>Reset due date</button>
+            <div className="card" style={{ padding: 12, marginBottom: 12, background: "#f3f4f6", border: "1px solid var(--border)" }}>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>Reminder: draft assistance only</div>
+              <div className="small" style={{ marginTop: 4 }}>
+                This AI-generated letter is for drafting purposes only and is not legal advice or an official HOA notice. Always review and follow your governing documents before sending.
               </div>
             </div>
-          </section>
 
-          <div className="grid one" style={{ gap: 12 }}>
-            <CommunitySelector onLoaded={(c, logoUrl) => {
-              setCommunity(c);
-              setCommunityLogoUrl(logoUrl);
-              if (c) {
-                setLetterheadOverride("");
-                setGuidelinesTextExtra("");
-                setGuidelinesUrlExtra("");
-              }
-            }} />
+            <div className="grid two">
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Letter type</div>
+                <select className="input" value={letterType} onChange={(e) => setLetterType(e.target.value as any)}>
+                  {LETTER_TYPES.map(t => <option key={t.value} value={t.value}>{t.value}</option>)}
+                </select>
+                <div className="small" style={{ marginTop: 6 }}>{LETTER_TYPES.find(t => t.value === letterType)?.description}</div>
+              </label>
 
-            <div className="card" style={{ padding: 16 }}>
-              <div style={{ fontWeight: 900 }}>Why teams use this</div>
-              <ul className="small" style={{ marginTop: 8, paddingLeft: 18 }}>
-                <li>One workspace for drafting, branding, and delivery.</li>
-                <li>Keep tone consistent with preset templates and reminders.</li>
-                <li>Logo-ready PDFs to print, email, or archive in minutes.</li>
-              </ul>
-              <div className="hr" />
-              <div className="muted small">Need to onboard another community? Add it above and reuse the same workflow.</div>
+              <label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span className="small">Tone</span>
+                  <span className="small" title={toneHelp[tone]}>?</span>
+                </div>
+                <select className="input" value={tone} onChange={(e) => setTone(e.target.value as any)}>
+                  {TONES.map(t => <option key={t.value} value={t.value}>{t.value}</option>)}
+                </select>
+                <div className="small" style={{ marginTop: 6 }}>{toneHelp[tone]}</div>
+              </label>
+
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Subject line (optional)</div>
+                <input className="input" value={subjectLine} onChange={(e) => setSubjectLine(e.target.value)} placeholder="e.g., Notice of Landscaping Violation" />
+                <div className="small" style={{ marginTop: 6 }}>Used in the letter heading/RE: line.</div>
+              </label>
+
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Letter date</div>
+                <input className="input" value={letterDate} onChange={(e) => setLetterDate(e.target.value)} />
+                <div className="small" style={{ marginTop: 6 }}>Defaults to today. Use the date you intend to send the notice.</div>
+              </label>
+            </div>
+
+            <div className="hr" />
+            <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>Recipient & property</div>
+            <div className="grid two">
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Homeowner name</div>
+                <input className="input" value={homeownerName} onChange={(e) => setHomeownerName(e.target.value)} placeholder="Full name" />
+              </label>
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Mailing address</div>
+                <input className="input" value={homeownerAddress} onChange={(e) => setHomeownerAddress(e.target.value)} placeholder="Street, City, State ZIP" />
+              </label>
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Property address (if different)</div>
+                <input className="input" value={propertyAddress} onChange={(e) => setPropertyAddress(e.target.value)} placeholder="Service/lot address" />
+              </label>
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Incident or notice date</div>
+                <input className="input" value={incidentDate} onChange={(e) => setIncidentDate(e.target.value)} placeholder="e.g., May 14, 2024" />
+              </label>
+            </div>
+
+            <div className="hr" />
+            <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>Context & deadlines</div>
+            <div className="grid two">
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Violation or topic</div>
+                <select className="input" value={violationType} onChange={(e) => setViolationType(e.target.value as any)}>
+                  {VIOLATIONS.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </label>
+
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Compliance / payment deadline</div>
+                <input className="input" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                <div className="small" style={{ marginTop: 6 }}>Defaults to 7 days from today.</div>
+              </label>
+
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Rule / section cited (optional)</div>
+                <input
+                  className="input"
+                  value={ruleRef}
+                  onChange={(e) => {
+                    setRuleRef(e.target.value);
+                    if (autoRuleFromGuidelines) setAutoRuleFromGuidelines(false);
+                  }}
+                  placeholder="e.g., CC&R §4.2 Parking"
+                  disabled={autoRuleFromGuidelines}
+                />
+                <div className="small" style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span>Leave blank or let AI cite a relevant section from your guidelines.</span>
+                  <button
+                    type="button"
+                    className="button ghost"
+                    style={{ padding: "4px 10px" }}
+                    onClick={() => {
+                      setRuleRef("");
+                      setAutoRuleFromGuidelines(s => !s);
+                    }}
+                  >
+                    {autoRuleFromGuidelines ? "Disable auto-citation" : "Ask AI to cite from guidelines"}
+                  </button>
+                </div>
+              </label>
+
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Amount due (optional)</div>
+                <input className="input" value={amountDue} onChange={(e) => setAmountDue(e.target.value)} placeholder="$100 late dues" />
+              </label>
+
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Appeal decision / notes (optional)</div>
+                <input className="input" value={appealReason} onChange={(e) => setAppealReason(e.target.value)} placeholder="Board response to any appeal" />
+              </label>
+
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Additional context</div>
+                <textarea className="input" rows={3} value={details} onChange={(e) => setDetails(e.target.value)} placeholder="What happened, photo descriptions, time of day, etc." />
+              </label>
+            </div>
+
+            <div className="hr" />
+            <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>Sign-off & replies</div>
+            <div className="grid two">
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Sender name (board/manager)</div>
+                <input className="input" value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="e.g., Jordan Smith" />
+              </label>
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Sender title</div>
+                <input className="input" value={senderTitle} onChange={(e) => setSenderTitle(e.target.value)} placeholder="Board Secretary, Community Manager" />
+              </label>
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Contact for questions</div>
+                <input className="input" value={senderContact} onChange={(e) => setSenderContact(e.target.value)} placeholder="phone/email for replies" />
+              </label>
+              <label>
+                <div className="small" style={{ marginBottom: 6 }}>Reply instructions (optional)</div>
+                <input className="input" value={replyInstructions} onChange={(e) => setReplyInstructions(e.target.value)} placeholder="How the homeowner should respond or appeal" />
+              </label>
+            </div>
+
+            <div className="hr" />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              <div className="small" style={{ fontWeight: 800 }}>Branding & guideline extras (optional)</div>
+              <button className="button ghost" type="button" onClick={() => setShowDetails(s => !s)}>
+                {showDetails ? "Hide" : "Show"} extras
+              </button>
+            </div>
+            {showDetails && (
+              <div className="grid two" style={{ marginTop: 10 }}>
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Extra guideline text</div>
+                  <textarea className="input" rows={4} value={guidelinesTextExtra} onChange={(e) => setGuidelinesTextExtra(e.target.value)} placeholder="Add temporary rules or clarifications for this notice." />
+                </label>
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Guidelines URL override</div>
+                  <input className="input" value={guidelinesUrlExtra} onChange={(e) => setGuidelinesUrlExtra(e.target.value)} placeholder="https://example.com/ccr" />
+                  <div className="small" style={{ marginTop: 6 }}>If set, replaces any saved community URL.</div>
+                </label>
+                <label>
+                  <div className="small" style={{ marginBottom: 6 }}>Letterhead override</div>
+                  <textarea
+                    className="input"
+                    rows={4}
+                    value={letterheadOverride}
+                    onChange={(e) => setLetterheadOverride(e.target.value)}
+                    placeholder={"Maple Ridge HOA\n123 Main St\n(555) 555-5555\nhoa@example.com"}
+                  />
+                </label>
+                <div className="small" style={{ marginTop: 12 }}>
+                  Saved community branding stays intact—override only when sending on behalf of a new board or building.
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 14 }}>
+              <button className="button primary" onClick={generatePreview} disabled={loading}>
+                {loading ? "Drafting…" : "Create professional notice"}
+              </button>
+              <button className="button" onClick={() => setDueDate(formatDueDate(7))} disabled={loading}>Reset due date</button>
             </div>
           </div>
-        </div>
+        </section>
+
+        <section className="card" style={{ padding: 18, marginTop: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontWeight: 900 }}>Community profiles, simplified</div>
+              <div className="small" style={{ marginTop: 4 }}>
+                Manage branding and guidelines on a dedicated page, then reuse them automatically in new drafts.
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <a className="button primary" href="/community" style={{ textDecoration: "none" }}>Open profiles</a>
+              <button className="button" onClick={refreshLastCommunity} disabled={communityLoading}>
+                {communityLoading ? "Loading…" : "Load last profile"}
+              </button>
+            </div>
+          </div>
+
+          <div className="hr" />
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            {community ? (
+              <div className="pill">Active: {community.name}{communityLogoUrl ? " • Logo set" : ""}</div>
+            ) : (
+              <div className="pill" style={{ background: "#f3f4f6", color: "#1f2933" }}>No profile loaded yet</div>
+            )}
+            <div className="small" style={{ color: "var(--muted)" }}>
+              Profiles live separately now, keeping this page focused on drafting.
+            </div>
+          </div>
+        </section>
 
         {preview && (
           <section style={{ marginTop: 18 }} id="preview">
@@ -588,8 +647,8 @@ export default function Page() {
                 )}
               </div>
 
-              <div style={{ marginTop: 12, padding: 16, borderRadius: 14, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.25)" }}>
-                <pre style={{ margin: 0, whiteSpace: "pre-wrap", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace", fontSize: 14, lineHeight: 1.5 }}>
+              <div style={{ marginTop: 12, padding: 16, borderRadius: 14, border: "1px solid var(--border)", background: "#f9fafb" }}>
+                <pre style={{ margin: 0, whiteSpace: "pre-wrap", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace", fontSize: 14, lineHeight: 1.5, color: "#111827" }}>
                   {preview}
                 </pre>
               </div>

@@ -51,6 +51,17 @@ export async function updateCommunity(
   return data as Community;
 }
 
+export async function getCommunity(id: string): Promise<Community | null> {
+  const { data, error } = await supabase
+    .from("communities")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data as Community) ?? null;
+}
+
 
 export function publicLogoUrl(logo_path: string | null): string | null {
   if (!logo_path) return null;
