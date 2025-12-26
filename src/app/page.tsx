@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import CommunitySelector from "@/components/CommunitySelector";
-import { Community } from "@/lib/communityStore";
+import { Community, getCommunity, publicLogoUrl } from "@/lib/communityStore";
 import { buildHoaPdfBytes } from "@/lib/pdfClient";
 
 const LETTER_TYPES = [
@@ -101,6 +100,8 @@ export default function Page() {
   const [emailTo, setEmailTo] = useState<string>("");
   const [emailStatus, setEmailStatus] = useState<string>("");
 
+  const [communityLoading, setCommunityLoading] = useState(false);
+
   useEffect(() => {
     const s = getUnlockState();
     setUnlocked(s.unlocked);
@@ -108,6 +109,8 @@ export default function Page() {
 
     const last = localStorage.getItem("hoa_last_letter");
     if (last && !preview) setPreview(last);
+    const lastCommunityId = localStorage.getItem("hoa_last_community_id");
+    if (lastCommunityId) hydrateCommunity(lastCommunityId).catch(console.error);
   }, []);
 
   const toneHelp = useMemo<Record<string, string>>(
@@ -129,6 +132,33 @@ export default function Page() {
 
   function effectiveLetterhead() {
     return (letterheadOverride || community?.letterhead || "").trim();
+  }
+
+  async function hydrateCommunity(id: string) {
+    setCommunityLoading(true);
+    try {
+      const c = await getCommunity(id);
+      if (c) {
+        setCommunity(c);
+        setCommunityLogoUrl(publicLogoUrl(c.logo_path));
+        setLetterheadOverride("");
+        setGuidelinesTextExtra("");
+        setGuidelinesUrlExtra("");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCommunityLoading(false);
+    }
+  }
+
+  function refreshLastCommunity() {
+    const lastCommunityId = localStorage.getItem("hoa_last_community_id");
+    if (!lastCommunityId) {
+      alert("No saved community profile yet.");
+      return;
+    }
+    hydrateCommunity(lastCommunityId);
   }
 
   async function generatePreview() {
@@ -321,8 +351,8 @@ export default function Page() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
               width: 38, height: 38, borderRadius: 12,
-              background: "linear-gradient(135deg, rgba(124,58,237,0.95), rgba(14,165,233,0.85))",
-              border: "1px solid rgba(255,255,255,0.18)"
+              background: "linear-gradient(135deg, #6366f1, #22c55e)",
+              border: "1px solid rgba(99,102,241,0.15)"
             }} />
             <div>
               <div style={{ fontWeight: 900, letterSpacing: 0.2 }}>HOA Letter AI</div>
@@ -331,6 +361,7 @@ export default function Page() {
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <a className="button ghost" href="/community" style={{ textDecoration: "none" }}>Community profiles</a>
             <a className="button ghost" href="/pricing" style={{ textDecoration: "none" }}>Pricing</a>
             <a className="button ghost" href="#draft" style={{ textDecoration: "none" }}>Draft</a>
           </div>
@@ -370,25 +401,24 @@ export default function Page() {
           ))}
         </section>
 
-        <div className="grid two" style={{ marginTop: 18, alignItems: "start", gap: 16 }}>
-          <section id="draft" className="card" ref={formRef}>
-            <div style={{ padding: 18 }}>
+        <section id="draft" className="card" ref={formRef} style={{ marginTop: 18 }}>
+          <div style={{ padding: 18 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                 <div>
                   <div style={{ fontWeight: 900, fontSize: 20 }}>Build the notice</div>
                   <div className="small">Complete the essentials, then add context only where needed.</div>
                 </div>
-                {community?.name ? <span className="badge">Community: {community.name}</span> : <span className="badge">Optional: add community profile</span>}
+                {community?.name ? <span className="badge">Community: {community.name}</span> : <span className="badge">Optional: saved profiles auto-load</span>}
               </div>
 
-              <div className="hr" />
+            <div className="hr" />
 
-              <div className="card" style={{ padding: 12, marginBottom: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)" }}>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>Reminder: draft assistance only</div>
-                <div className="small" style={{ marginTop: 4 }}>
-                  This AI-generated letter is for drafting purposes only and is not legal advice or an official HOA notice. Always review and follow your governing documents before sending.
-                </div>
+            <div className="card" style={{ padding: 12, marginBottom: 12, background: "#f3f4f6", border: "1px solid var(--border)" }}>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>Reminder: draft assistance only</div>
+              <div className="small" style={{ marginTop: 4 }}>
+                This AI-generated letter is for drafting purposes only and is not legal advice or an official HOA notice. Always review and follow your governing documents before sending.
               </div>
+            </div>
 
               <div className="grid two">
                 <label>
@@ -544,31 +574,37 @@ export default function Page() {
                 <button className="button" onClick={() => setDueDate(formatDueDate(7))} disabled={loading}>Reset due date</button>
               </div>
             </div>
-          </section>
+          </div>
+        </section>
 
-          <div className="grid one" style={{ gap: 12 }}>
-            <CommunitySelector onLoaded={(c, logoUrl) => {
-              setCommunity(c);
-              setCommunityLogoUrl(logoUrl);
-              if (c) {
-                setLetterheadOverride("");
-                setGuidelinesTextExtra("");
-                setGuidelinesUrlExtra("");
-              }
-            }} />
-
-            <div className="card" style={{ padding: 16 }}>
-              <div style={{ fontWeight: 900 }}>Why teams use this</div>
-              <ul className="small" style={{ marginTop: 8, paddingLeft: 18 }}>
-                <li>One workspace for drafting, branding, and delivery.</li>
-                <li>Keep tone consistent with preset templates and reminders.</li>
-                <li>Logo-ready PDFs to print, email, or archive in minutes.</li>
-              </ul>
-              <div className="hr" />
-              <div className="muted small">Need to onboard another community? Add it above and reuse the same workflow.</div>
+        <section className="card" style={{ padding: 18, marginTop: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontWeight: 900 }}>Community profiles, simplified</div>
+              <div className="small" style={{ marginTop: 4 }}>
+                Manage branding and guidelines on a dedicated page, then reuse them automatically in new drafts.
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <a className="button primary" href="/community" style={{ textDecoration: "none" }}>Open profiles</a>
+              <button className="button" onClick={refreshLastCommunity} disabled={communityLoading}>
+                {communityLoading ? "Loading…" : "Load last profile"}
+              </button>
             </div>
           </div>
-        </div>
+
+          <div className="hr" />
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            {community ? (
+              <div className="pill">Active: {community.name}{communityLogoUrl ? " • Logo set" : ""}</div>
+            ) : (
+              <div className="pill" style={{ background: "#f3f4f6", color: "#1f2933" }}>No profile loaded yet</div>
+            )}
+            <div className="small" style={{ color: "var(--muted)" }}>
+              Profiles live separately now, keeping this page focused on drafting.
+            </div>
+          </div>
+        </section>
 
         {preview && (
           <section style={{ marginTop: 18 }} id="preview">
@@ -588,8 +624,8 @@ export default function Page() {
                 )}
               </div>
 
-              <div style={{ marginTop: 12, padding: 16, borderRadius: 14, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.25)" }}>
-                <pre style={{ margin: 0, whiteSpace: "pre-wrap", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace", fontSize: 14, lineHeight: 1.5 }}>
+              <div style={{ marginTop: 12, padding: 16, borderRadius: 14, border: "1px solid var(--border)", background: "#f9fafb" }}>
+                <pre style={{ margin: 0, whiteSpace: "pre-wrap", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace", fontSize: 14, lineHeight: 1.5, color: "#111827" }}>
                   {preview}
                 </pre>
               </div>
