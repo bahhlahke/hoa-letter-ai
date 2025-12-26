@@ -54,6 +54,7 @@ export async function updateCommunity(
 
 export function publicLogoUrl(logo_path: string | null): string | null {
   if (!logo_path) return null;
-  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!baseUrl) return null;
   return `${baseUrl}/storage/v1/object/public/logos/${logo_path}`;
 }
