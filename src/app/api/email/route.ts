@@ -1,17 +1,28 @@
-import sgMail from "@sendgrid/mail";
 import { NextResponse } from "next/server";
+import sgMail from "@sendgrid/mail";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
 
 export async function POST(req: Request) {
-  const { to, subject, body } = await req.json();
+  try {
+    const { to, subject, body } = await req.json();
 
-  await sgMail.send({
-    to,
-    from: process.env.FROM_EMAIL!,
-    subject,
-    text: body
-  });
+    if (!to || !subject || !body) {
+      return NextResponse.json({ error: "Missing to/subject/body" }, { status: 400 });
+    }
 
-  return NextResponse.json({ ok: true });
+    await sgMail.send({
+      to,
+      from: process.env.FROM_EMAIL!,
+      subject,
+      text: body
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message ?? "Email error" }, { status: 500 });
+  }
 }
