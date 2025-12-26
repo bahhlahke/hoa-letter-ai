@@ -10,11 +10,10 @@ export async function POST(req: Request) {
   const body = await req.json();
 
   const system = `
-You draft HOA violation notices.
-If community guidelines include section numbers, titles, or headings,
-cite the exact section when relevant.
+Draft HOA violation notices.
+Cite exact guideline sections if present.
 Never invent sections.
-Maintain professional HOA tone.
+Maintain professional tone.
   `;
 
   const user = `
@@ -22,7 +21,7 @@ Community: ${body.communityName}
 Violation: ${body.violationType}
 Tone: ${body.tone}
 Guidelines:
-${body.guidelines || "None provided"}
+${body.guidelines || "None"}
   `;
 
   const r = await openai.chat.completions.create({
