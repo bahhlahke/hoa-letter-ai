@@ -1,6 +1,15 @@
+import Footer from "@/components/Footer";
+import PricingTracker from "@/components/PricingTracker";
+
+export const metadata = {
+  title: "Pricing | HOA Letter AI",
+  description: "Simple HOA notice pricing with per-notice unlocks and subscriptions."
+};
+
 export default function PricingPage() {
   return (
     <main className="container" style={{ paddingTop: 40, paddingBottom: 60 }}>
+      <PricingTracker />
       <div className="pill">
         <span>Professional HOA Communication</span>
         <span style={{ opacity: 0.7 }}>•</span>
@@ -20,12 +29,13 @@ export default function PricingPage() {
           <div style={{ fontWeight: 900, fontSize: 20 }}>One-time</div>
           <div className="muted" style={{ marginTop: 6 }}>For occasional use.</div>
           <div style={{ fontSize: 34, fontWeight: 900, marginTop: 10 }}>$5</div>
-          <div className="small">per notice</div>
+          <div className="small">per notice (one export/email unlock for a single draft)</div>
           <div className="hr" />
           <ul className="muted" style={{ marginTop: 0, paddingLeft: 18 }}>
             <li>Professional tone (friendly/neutral/firm)</li>
             <li>Guideline references (when provided)</li>
             <li>Export to TXT / DOCX / PDF</li>
+            <li>24-hour access window for that letter</li>
           </ul>
           <div className="small" style={{ marginTop: 10 }}>Secure payment via Stripe.</div>
           <a href="/" className="button" style={{ display: "inline-block", textDecoration: "none", marginTop: 12 }}>Draft a notice</a>
@@ -45,9 +55,20 @@ export default function PricingPage() {
             <li>Saved community profiles (guidelines + letterhead)</li>
             <li>Logo-branded HOA PDF templates</li>
             <li>Direct email delivery (SendGrid)</li>
+            <li>Fair use and reasonable rate limits apply</li>
           </ul>
           <div className="small" style={{ marginTop: 10 }}>Cancel anytime.</div>
           <a href="/" className="button primary" style={{ display: "inline-block", textDecoration: "none", marginTop: 12 }}>Start drafting</a>
+        </div>
+      </div>
+
+      <div className="card" style={{ padding: 18, marginTop: 16 }}>
+        <div style={{ fontWeight: 900, marginBottom: 4 }}>Policies</div>
+        <div className="small" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <a href="/terms">Terms</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/refunds">Refunds</a>
+          <a href="/contact">Need help?</a>
         </div>
       </div>
 
@@ -57,7 +78,16 @@ export default function PricingPage() {
           Draft assistance only (not legal advice). You control the final wording and delivery. We do not store your generated
           letters unless you choose to copy/download/send.
         </div>
+        <div className="hr" />
+        <div className="small" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
+          <a href="/refunds">Refunds</a>
+          <a href="/contact">Need help?</a>
+        </div>
       </div>
+
+      <Footer />
     </main>
   );
 }

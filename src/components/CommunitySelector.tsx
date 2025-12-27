@@ -15,6 +15,7 @@ export default function CommunitySelector(props: {
   // editable fields
   const [guidelines, setGuidelines] = useState("");
   const [guidelinesUrl, setGuidelinesUrl] = useState("");
+  const [guidelinesText, setGuidelinesText] = useState("");
   const [letterhead, setLetterhead] = useState("");
   const [logoPath, setLogoPath] = useState<string | null>(null);
   const logoUrl = useMemo(() => publicLogoUrl(logoPath), [logoPath]);
@@ -35,6 +36,7 @@ export default function CommunitySelector(props: {
     const c = communities.find(x => x.id === selectedId) || null;
     setGuidelines(c?.guidelines || "");
     setGuidelinesUrl(c?.guidelines_url || "");
+    setGuidelinesText(c?.guidelines_text || "");
     setLetterhead(c?.letterhead || "");
     setLogoPath(c?.logo_path || null);
     props.onLoaded(c, c ? publicLogoUrl(c.logo_path) : null);
@@ -65,6 +67,7 @@ export default function CommunitySelector(props: {
       const updated = await updateCommunity(selectedId, {
         guidelines: guidelines || null,
         guidelines_url: guidelinesUrl || null,
+        guidelines_text: guidelinesText || null,
         letterhead: letterhead || null,
         logo_path: logoPath || null
       });
@@ -128,6 +131,16 @@ export default function CommunitySelector(props: {
 
       <div className="small" style={{ fontWeight: 800, marginBottom: 8 }}>Guidelines</div>
       <textarea className="input" rows={5} value={guidelines} onChange={(e) => setGuidelines(e.target.value)} placeholder="Paste relevant CC&R sections here (include section numbers when possible)." />
+
+      <div style={{ height: 10 }} />
+      <label className="small" style={{ display: "block", marginBottom: 6 }}>Guideline text for citations</label>
+      <textarea
+        className="input"
+        rows={5}
+        value={guidelinesText}
+        onChange={(e) => setGuidelinesText(e.target.value)}
+        placeholder="Full text excerpts enable safer, verifiable citations."
+      />
 
       <div style={{ height: 10 }} />
       <label className="small" style={{ display: "block", marginBottom: 6 }}>Guidelines URL (optional)</label>

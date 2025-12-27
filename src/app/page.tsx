@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Community, getCommunity, publicLogoUrl } from "@/lib/communityStore";
-import { buildHoaPdfBytes } from "@/lib/pdfClient";
+import { track } from "@/lib/analytics";
+import Footer from "@/components/Footer";
+import type { Entitlements } from "@/lib/billing/entitlements";
 
 const LETTER_TYPES = [
   { value: "Violation notice", description: "First or follow-up warning when a rule is broken." },
@@ -43,19 +45,6 @@ function formatLetterDate(date?: Date) {
   return d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 }
 
-function getUnlockState() {
-  if (typeof window === "undefined") return { unlocked: false, credits: 0 };
-  const until = Number(localStorage.getItem("hoa_unlocked_until") || "0");
-  const credits = Number(localStorage.getItem("hoa_one_time_credits") || "0");
-  const unlocked = Date.now() < until;
-  return { unlocked, credits };
-}
-
-function consumeCreditIfAny() {
-  const credits = Number(localStorage.getItem("hoa_one_time_credits") || "0");
-  if (credits > 0) localStorage.setItem("hoa_one_time_credits", String(credits - 1));
-}
-
 export default function Page() {
   const formRef = useRef<HTMLElement | null>(null);
 
@@ -94,24 +83,41 @@ export default function Page() {
   // Output + monetization
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<string>("");
-  const [unlocked, setUnlocked] = useState(false);
-  const [credits, setCredits] = useState(0);
+  const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [paywallReason, setPaywallReason] = useState<string>("");
 
   // Email delivery
   const [emailTo, setEmailTo] = useState<string>("");
   const [emailStatus, setEmailStatus] = useState<string>("");
 
   const [communityLoading, setCommunityLoading] = useState(false);
+  const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@hoa-letter-ai.com";
+
+  function showPaywall(reason: string) {
+    setPaywallReason(reason);
+    setPaywallOpen(true);
+    track("paywall_shown", { reason });
+  }
+
+  async function refreshEntitlements() {
+    try {
+      const res = await fetch("/api/entitlements", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setEntitlements(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
 
   useEffect(() => {
-    const s = getUnlockState();
-    setUnlocked(s.unlocked);
-    setCredits(s.credits);
-
     const last = localStorage.getItem("hoa_last_letter");
     if (last && !preview) setPreview(last);
     const lastCommunityId = localStorage.getItem("hoa_last_community_id");
     if (lastCommunityId) hydrateCommunity(lastCommunityId).catch(console.error);
+    refreshEntitlements();
   }, []);
 
   const toneHelp = useMemo<Record<string, string>>(
@@ -121,18 +127,25 @@ export default function Page() {
 
   const displayPreview = useMemo(() => {
     if (!preview) return "";
+    const unlocked = entitlements?.canExportPdf || entitlements?.canEmail;
     if (unlocked) return preview;
     const words = preview.split(/\s+/).slice(0, 80).join(" ");
     return `${words}${words ? " …" : ""}`;
-  }, [preview, unlocked]);
+  }, [preview, entitlements]);
+
+  const unlocked = Boolean(entitlements?.canExportPdf || entitlements?.canEmail);
+  const credits = entitlements?.remainingOneTimeCredits ?? 0;
 
   function effectiveGuidelinesText() {
     const pieces = [
+      (community?.guidelines_text || "").trim(),
       (community?.guidelines || "").trim(),
       (guidelinesTextExtra || "").trim(),
     ].filter(Boolean);
     return pieces.join("\n\n---\n\n");
   }
+
+  const allowCitations = useMemo(() => Boolean(effectiveGuidelinesText().trim()), [community, guidelinesTextExtra]);
 
   function effectiveGuidelinesUrl() {
     return (guidelinesUrlExtra || community?.guidelines_url || "").trim();
@@ -173,6 +186,7 @@ export default function Page() {
     setLoading(true);
     setEmailStatus("");
     try {
+      const allowAutoRule = allowCitations && autoRuleFromGuidelines;
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -195,7 +209,7 @@ export default function Page() {
           senderContact,
           replyInstructions,
           ruleRef,
-          autoRuleFromGuidelines,
+          autoRuleFromGuidelines: allowAutoRule,
           details,
           guidelinesText: effectiveGuidelinesText(),
           guidelinesUrl: effectiveGuidelinesUrl(),
@@ -207,6 +221,7 @@ export default function Page() {
       setPreview(data.letter);
       localStorage.setItem("hoa_last_letter", data.letter);
       setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+      track("generate_letter", { letterType, violationType });
     } catch (e: any) {
       alert(e?.message ?? "Error");
     } finally {
@@ -217,6 +232,7 @@ export default function Page() {
   async function startCheckout(mode: "one-time" | "subscription") {
     setLoading(true);
     try {
+      track(mode === "subscription" ? "click_checkout_subscription" : "click_checkout_one_time");
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -234,96 +250,49 @@ export default function Page() {
 
   function copyLetter() {
     if (!preview) return;
+    if (!unlocked) { showPaywall("copy"); return; }
     navigator.clipboard.writeText(preview);
     alert("Copied.");
-    const s = getUnlockState();
-    if (s.credits > 0) {
-      consumeCreditIfAny();
-      const s2 = getUnlockState();
-      setUnlocked(s2.unlocked);
-      setCredits(s2.credits);
-    }
   }
 
-  function downloadTxt() {
+  async function exportLetter(format: "txt" | "docx" | "pdf") {
     if (!preview) return;
-    const blob = new Blob([preview], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `hoa-notice-${violationType.toLowerCase().replace(/\s+/g, "-")}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/export/${format}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          letter: preview,
+          violationType,
+          letterhead: effectiveLetterhead(),
+          communityName: community?.name || "",
+          logoUrl: communityLogoUrl,
+          fileName: `hoa-notice-${violationType.toLowerCase().replace(/\s+/g, "-")}`
+        })
+      });
 
-    const s = getUnlockState();
-    if (s.credits > 0) {
-      consumeCreditIfAny();
-      const s2 = getUnlockState();
-      setUnlocked(s2.unlocked);
-      setCredits(s2.credits);
-    }
-  }
-
-  async function downloadDocx() {
-    if (!preview) return;
-    const { Document, Packer, Paragraph, TextRun } = await import("docx");
-
-    const lines = preview.split(/\r?\n/);
-    const paragraphs = lines.map((line) =>
-      new Paragraph({ children: [new TextRun({ text: line.length ? line : " " })] })
-    );
-
-    const doc = new Document({ sections: [{ properties: {}, children: paragraphs }] });
-    const blob = await Packer.toBlob(doc);
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `hoa-notice-${violationType.toLowerCase().replace(/\s+/g, "-")}.docx`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-
-    const s = getUnlockState();
-    if (s.credits > 0) {
-      consumeCreditIfAny();
-      const s2 = getUnlockState();
-      setUnlocked(s2.unlocked);
-      setCredits(s2.credits);
-    }
-  }
-
-  async function downloadPdf() {
-    if (!preview) return;
-    const bytes = await buildHoaPdfBytes({
-      letter: preview,
-      letterhead: effectiveLetterhead(),
-      communityName: community?.name || undefined,
-      logoUrl: communityLogoUrl,
-    });
-
-    // TS-safe buffer copy
-    const buffer = bytes.buffer.slice(0) as ArrayBuffer;
-    const blob = new Blob([buffer], { type: "application/pdf" });
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `hoa-notice-${violationType.toLowerCase().replace(/\s+/g, "-")}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-
-    const s = getUnlockState();
-    if (s.credits > 0) {
-      consumeCreditIfAny();
-      const s2 = getUnlockState();
-      setUnlocked(s2.unlocked);
-      setCredits(s2.credits);
+      if (res.status === 402) { showPaywall("export"); return; }
+      if (res.status === 429) { throw new Error("Too many exports right now. Please wait a moment."); }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Export failed");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `hoa-notice-${violationType.toLowerCase().replace(/\s+/g, "-")}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      track(format === "pdf" ? "export_pdf" : format === "docx" ? "export_docx" : "export_txt", { violationType });
+      await refreshEntitlements();
+    } catch (e: any) {
+      alert(e?.message || "Export failed");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -340,8 +309,11 @@ export default function Page() {
         body: JSON.stringify({ to: emailTo.trim(), subject, body: preview }),
       });
       const data = await res.json();
+      if (res.status === 402) { showPaywall("email"); return; }
       if (!res.ok) throw new Error(data?.error ?? "Email failed");
       setEmailStatus("Sent ✅");
+      track("send_email", { hasCommunity: Boolean(community) });
+      await refreshEntitlements();
     } catch (e: any) {
       setEmailStatus(e?.message ?? "Email error");
     } finally {
@@ -538,11 +510,18 @@ export default function Page() {
                     style={{ padding: "4px 10px" }}
                     onClick={() => {
                       setRuleRef("");
+                      if (!allowCitations) return;
                       setAutoRuleFromGuidelines(s => !s);
                     }}
+                    disabled={!allowCitations}
                   >
-                    {autoRuleFromGuidelines ? "Disable auto-citation" : "Ask AI to cite from guidelines"}
+                    {allowCitations ? (autoRuleFromGuidelines ? "Disable auto-citation" : "Ask AI to cite from guidelines") : "Add guideline text for citations"}
                   </button>
+                  {!allowCitations && (
+                    <span className="small" style={{ color: "#b45309" }}>
+                      Citations require guideline text. Paste sections or upload them on the Community page.
+                    </span>
+                  )}
                 </div>
               </label>
 
@@ -731,9 +710,9 @@ export default function Page() {
                   <div className="hr" />
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <button className="button primary" onClick={copyLetter}>Copy notice</button>
-                    <button className="button" onClick={downloadTxt}>Download .txt</button>
-                    <button className="button" onClick={downloadDocx}>Download .docx</button>
-                    <button className="button" onClick={downloadPdf}>Download .pdf</button>
+                    <button className="button" onClick={() => exportLetter("txt")}>Download .txt</button>
+                    <button className="button" onClick={() => exportLetter("docx")}>Download .docx</button>
+                    <button className="button" onClick={() => exportLetter("pdf")}>Download .pdf</button>
                   </div>
 
                   <div className="hr" />
@@ -751,13 +730,46 @@ export default function Page() {
           </section>
         )}
 
-        <footer style={{ padding: "28px 0 10px" }} className="small">
-          <div className="hr" />
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <span>© {new Date().getFullYear()} HOA Letter AI</span>
-            <span>Draft assistance only — not legal advice.</span>
+        {paywallOpen && (
+          <div role="dialog" aria-modal="true" aria-label="Upgrade required" style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            display: "grid",
+            placeItems: "center",
+            padding: 16,
+            zIndex: 30,
+          }}>
+            <div className="card" style={{ padding: 18, maxWidth: 520, width: "100%", background: "#fff" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <div>
+                  <div style={{ fontWeight: 900 }}>Unlock exports & delivery</div>
+                  <div className="small" style={{ marginTop: 4 }}>{paywallReason ? `${paywallReason} requires a paid plan.` : "Upgrade to download or email."}</div>
+                </div>
+                <button aria-label="Close paywall" className="button ghost" onClick={() => setPaywallOpen(false)}>Close</button>
+              </div>
+
+              <div className="grid two" style={{ marginTop: 12 }}>
+                <div className="card" style={{ padding: 14 }}>
+                  <div style={{ fontWeight: 900 }}>$15 / month</div>
+                  <div className="small">Unlimited notices (fair use), exports, email, saved communities.</div>
+                  <button className="button primary" style={{ width: "100%", marginTop: 10 }} onClick={() => startCheckout("subscription")}>Subscribe</button>
+                </div>
+                <div className="card" style={{ padding: 14 }}>
+                  <div style={{ fontWeight: 900 }}>$5 one-time</div>
+                  <div className="small">Unlock a single export or email for 24 hours.</div>
+                  <button className="button" style={{ width: "100%", marginTop: 10 }} onClick={() => startCheckout("one-time")}>One-time checkout</button>
+                </div>
+              </div>
+
+              <div className="small" style={{ marginTop: 10 }}>
+                Need help? <a href={`mailto:${supportEmail}`}>{supportEmail}</a>
+              </div>
+            </div>
           </div>
-        </footer>
+        )}
+
+        <Footer />
       </div>
     </main>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { track } from "@/lib/analytics";
 
 type Status = "checking" | "paid" | "unpaid" | "error";
 
@@ -26,7 +27,7 @@ export default function SuccessPage() {
         const session_id = params.get("session_id");
         if (!session_id) { setStatus("error"); return; }
 
-        const res = await fetch(`/api/verify?session_id=${encodeURIComponent(session_id)}`);
+        const res = await fetch(`/api/verify?session_id=${encodeURIComponent(session_id)}`, { credentials: "include" });
         const data = await res.json();
         if (!res.ok) { setStatus("error"); return; }
 
@@ -34,6 +35,7 @@ export default function SuccessPage() {
           setMode(data.mode ?? null);
           setUnlock(data.mode ?? null);
           setStatus("paid");
+          track("checkout_success", { mode: data.mode });
           setTimeout(() => { window.location.href = "/?unlocked=1"; }, 900);
         } else setStatus("unpaid");
       } catch { setStatus("error"); }
