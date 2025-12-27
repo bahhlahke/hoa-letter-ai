@@ -366,7 +366,7 @@ export default function Page() {
             Keep your notices consistent, branded, and on deadline. Our AI references your CC&Rs, suggests the right tone, and delivers ready-to-send text without bouncing between apps.
           </p>
 
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 18 }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 18 }}>
             <button className="button primary" onClick={scrollToForm}>Start a notice</button>
             <span className="kbd">No account required</span>
           </div>
@@ -659,10 +659,8 @@ export default function Page() {
                 {!unlocked && (
                   <div className="preview-overlay">
                     <div className="overlay-badge">Secure HOA branding</div>
-                    <div className="overlay-head">Upgrade to view the full notice</div>
-                    <div className="overlay-copy">
-                      Protect sensitive details and unlock exports with a one-time credit or monthly plan.
-                    </div>
+                    <div className="overlay-head">Full preview + delivery tools</div>
+                    <div className="overlay-copy">Enable PDF/DOCX exports, copy, and email delivery while keeping your branding intact.</div>
                   </div>
                 )}
               </div>
@@ -670,7 +668,7 @@ export default function Page() {
               {!unlocked ? (
                 <>
                   <div className="hr" />
-                  <div className="muted" style={{ fontWeight: 900, marginBottom: 10 }}>Unlock downloads & delivery</div>
+                  <div className="muted" style={{ fontWeight: 900, marginBottom: 10 }}>Downloads & delivery features</div>
 
                   <div className="grid two">
                     <div className="card" style={{ padding: 16 }}>
@@ -731,7 +729,7 @@ export default function Page() {
         )}
 
         {paywallOpen && (
-          <div role="dialog" aria-modal="true" aria-label="Upgrade required" style={{
+          <div role="dialog" aria-modal="true" aria-label="Exports and delivery options" style={{
             position: "fixed",
             inset: 0,
             background: "rgba(0,0,0,0.45)",
@@ -743,8 +741,8 @@ export default function Page() {
             <div className="card" style={{ padding: 18, maxWidth: 520, width: "100%", background: "#fff" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                 <div>
-                  <div style={{ fontWeight: 900 }}>Unlock exports & delivery</div>
-                  <div className="small" style={{ marginTop: 4 }}>{paywallReason ? `${paywallReason} requires a paid plan.` : "Upgrade to download or email."}</div>
+                  <div style={{ fontWeight: 900 }}>Exports & delivery features</div>
+                  <div className="small" style={{ marginTop: 4 }}>{paywallReason ? `Include ${paywallReason} with downloads, exports, and email delivery.` : "Downloads, DOCX/PDF exports, and email delivery live here."}</div>
                 </div>
                 <button aria-label="Close paywall" className="button ghost" onClick={() => setPaywallOpen(false)}>Close</button>
               </div>
