@@ -1,0 +1,18 @@
+/* Visual groupings and better spacing */
+.hero, .how-it-works, .features, .letter-form, .community-profile-form, .faq {
+  margin: 2rem auto;
+  padding: 1rem;
+  max-width: 600px;
+}
+
+.letter-form label, .community-profile-form label {
+  display: block;
+  margin: 1rem 0;
+}
+
+footer {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 3rem;
+}
