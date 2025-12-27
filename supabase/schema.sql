@@ -6,6 +6,7 @@ create table if not exists communities (
   name text not null,
   guidelines text,
   guidelines_url text,
+  guidelines_text text,
   letterhead text,
   logo_path text,
   created_at timestamp default now(),

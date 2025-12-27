@@ -16,6 +16,11 @@ This repo contains the full working app:
 ### Core
 - OPENAI_API_KEY=
 - APP_URL= (https://yourdomain.com)
+- ENTITLEMENTS_SECRET= (signs access cookies)
+- PAYWALL_ENFORCED=true
+- NEXT_PUBLIC_SUPPORT_EMAIL=support@hoa-letter-ai.com
+- NEXT_PUBLIC_ANALYTICS_PROVIDER=console|plausible
+- SUPPORT_EMAIL= (reply-to for outgoing mail)
 
 ### Stripe
 - STRIPE_SECRET_KEY=
@@ -31,10 +36,28 @@ This repo contains the full working app:
 - SENDGRID_API_KEY=
 - FROM_EMAIL= (verified sender)
 
+### Optional analytics
+- NEXT_PUBLIC_ANALYTICS_PROVIDER=plausible|console
+
 ## Supabase setup
 1. Run `supabase/schema.sql` in the SQL editor
+2. Apply migrations in `supabase/migrations` (adds `guidelines_text`).
 2. Create a Storage bucket named `logos` (Public is easiest for MVP)
 3. Optional: add RLS later; MVP schema keeps it simple.
+
+## Rate limits
+- Draft generation: 10 requests per minute per IP
+- Exports: 10 requests per minute per IP
+- Email delivery: 3 requests per minute per IP + per recipient
+
+## Billing & entitlements
+- Entitlements are set via Stripe checkout success and stored in a signed, httpOnly cookie.
+- One-time purchases grant a single export/email credit for 24 hours; subscriptions unlock exports/email for 30 days.
+- Server endpoints enforce export/email access; paywall is not client-only.
+
+## Analytics
+- Client-side `track` helper in `src/lib/analytics.ts` supports a no-op/console fallback or Plausible (`window.plausible`).
+- Server endpoint `/api/analytics` logs events when sendBeacon is used.
 
 ## Run locally
 ```bash

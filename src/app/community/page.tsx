@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import CommunitySelector from "@/components/CommunitySelector";
+import Footer from "@/components/Footer";
 import { Community } from "@/lib/communityStore";
 
 export default function CommunityPage() {
@@ -47,12 +48,12 @@ export default function CommunityPage() {
           )}
         </section>
 
-        <div className="grid" style={{ marginTop: 10 }}>
-          <CommunitySelector onLoaded={(c, url) => {
-            setCommunity(c);
-            setLogoUrl(url);
-            if (c) localStorage.setItem("hoa_last_community_id", c.id);
-          }} />
+      <div className="grid" style={{ marginTop: 10 }}>
+        <CommunitySelector onLoaded={(c, url) => {
+          setCommunity(c);
+          setLogoUrl(url);
+          if (c) localStorage.setItem("hoa_last_community_id", c.id);
+        }} />
 
           <div className="card" style={{ padding: 16 }}>
             <div style={{ fontWeight: 900 }}>How it works</div>
@@ -68,6 +69,7 @@ export default function CommunityPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { rateLimit, getIp } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -13,6 +14,15 @@ function safeStr(v: unknown, max = 2000): string {
 
 export async function POST(req: Request) {
   try {
+    const ip = getIp(req);
+    const limit = rateLimit({ key: `generate:${ip}`, limit: 10, windowMs: 60_000 });
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many drafts right now. Please wait a moment and try again." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
+
     const body = await req.json();
 
     const letterType = safeStr(body.letterType, 64) || "General notice";
@@ -45,22 +55,42 @@ export async function POST(req: Request) {
       try {
         const r = await fetch(guidelinesUrl);
         if (r.ok) fetchedGuidelines = safeStr(await r.text(), 5000);
-      } catch {}
+      } catch {
+        fetchedGuidelines = "";
+      }
     }
 
-    const system = [
+    const hasGuidelineText = Boolean((guidelinesText || fetchedGuidelines).trim());
+
+    const systemLines = [
       "You draft professional HOA letters across multiple categories (violation notice, delinquency, appeal response, welcome, architectural request, and general notices).",
-      "If guidelines contain section numbers/titles/headings, cite the EXACT relevant section(s) verbatim by identifier (e.g., 'Section 4.2 (Parking)').",
-      "If the rule reference is requested automatically, pick the single most relevant section from the provided guidelines text or URL without inventing identifiers. If none apply, state that no specific section was provided.",
-      "Never invent or guess section numbers.",
       "Tone must be non-accusatory, factual, and respectful.",
       "No legal advice. Do not threaten fines/legal action unless explicitly stated in the provided details/guidelines.",
       "Keep it under 300 words.",
       "Format like an official letter: letterhead (if provided), date, recipient block, subject/RE line, salutation, organized paragraphs, and a polite closing + signature placeholder.",
       "When sender name/title/contact are provided, include them in the closing block to make replying easy.",
       "Use the provided letter date; if absent, use today's date in a friendly format (e.g., May 1, 2024).",
-      "Use solution-focused wording even for violation or delinquency topics."
-    ].join("\n");
+      "Use solution-focused wording even for violation or delinquency topics.",
+    ];
+
+    if (hasGuidelineText) {
+      systemLines.push(
+        "If guidelines contain section numbers/titles/headings, cite the EXACT relevant section(s) verbatim by identifier (e.g., 'Section 4.2 (Parking)').",
+        "Only cite sections that appear verbatim in the provided guidelines text below. If unsure, say 'No exact section found.'"
+      );
+    } else {
+      systemLines.push(
+        "Do not invent or guess section numbers. If no guideline text is provided, avoid fabricated citations and keep language factual."
+      );
+    }
+
+    if (autoRuleFromGuidelines && hasGuidelineText) {
+      systemLines.push(
+        "If the rule reference is requested automatically, pick the single most relevant section from the provided guidelines text without inventing identifiers. If none apply, state that no specific section was provided."
+      );
+    }
+
+    const system = systemLines.join("\n");
 
     const user = `Create an HOA ${letterType}.
 

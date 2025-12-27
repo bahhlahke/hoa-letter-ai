@@ -5,6 +5,7 @@ export type Community = {
   name: string;
   guidelines: string | null;
   guidelines_url: string | null;
+  guidelines_text: string | null;
   letterhead: string | null;
   logo_path: string | null;
   created_at: string | null;
@@ -34,7 +35,7 @@ export async function createCommunity(input: { name: string }): Promise<Communit
 
 export async function updateCommunity(
   id: string,
-  patch: Partial<Pick<Community, "name" | "guidelines" | "guidelines_url" | "letterhead" | "logo_path">>
+  patch: Partial<Pick<Community, "name" | "guidelines" | "guidelines_url" | "guidelines_text" | "letterhead" | "logo_path">>
 ): Promise<Community> {
   const { data, error } = await supabase
     .from("communities")
