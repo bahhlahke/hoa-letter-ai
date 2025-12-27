@@ -371,17 +371,17 @@ export default function Page() {
 
         <section style={{ padding: "34px 0 18px" }}>
           <div className="pill">
-            <span>Brand-safe PDFs</span><span style={{ opacity: 0.7 }}>•</span>
-            <span>Guideline citations</span><span style={{ opacity: 0.7 }}>•</span>
-            <span>Email delivery</span>
+            <span>AI-drafted notices</span><span style={{ opacity: 0.7 }}>•</span>
+            <span>Guideline-aware tone</span><span style={{ opacity: 0.7 }}>•</span>
+            <span>One-screen workflow</span>
           </div>
 
           <h1 style={{ fontSize: 48, lineHeight: 1.05, margin: "18px 0 8px" }}>
-            A calmer way to send HOA notices
+            HOA letters, streamlined by AI
           </h1>
 
           <p className="muted" style={{ fontSize: 18, maxWidth: 760, marginTop: 0 }}>
-            Draft letters that reference your CC&Rs, keep a professional tone, and ship with the right branding—without juggling multiple tools.
+            Keep your notices consistent, branded, and on deadline. Our AI references your CC&Rs, suggests the right tone, and delivers ready-to-send text without bouncing between apps.
           </p>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 18 }}>
@@ -392,15 +392,31 @@ export default function Page() {
 
         <section className="grid three" style={{ marginTop: 6 }}>
           {[
-            { t: "1. Set the tone", b: "Pick the letter type + tone so the draft reads firm or friendly—your choice." },
-            { t: "2. Drop essentials", b: "Add homeowner details, dates, and rule references without hunting templates." },
-            { t: "3. Export confidently", b: "Deliver a logo-ready PDF, copy/paste text, or email directly—all from one screen." },
+            { t: "AI that knows your rules", b: "Cite CC&Rs, insert deadlines, and keep the tone aligned to your board’s preference." },
+            { t: "Less form-filling", b: "Save community profiles once and focus only on the details that change per notice." },
+            { t: "Exports built in", b: "Copy, download, or email the final draft—brand-safe letterhead included when provided." },
           ].map(x => (
             <div key={x.t} className="card" style={{ padding: 18 }}>
               <div style={{ fontWeight: 900, marginBottom: 6 }}>{x.t}</div>
               <div className="muted">{x.b}</div>
             </div>
           ))}
+        </section>
+
+        <section className="card" style={{ padding: 18, marginTop: 12 }}>
+          <div style={{ fontWeight: 900, marginBottom: 8 }}>What stays on this page</div>
+          <div className="grid three" style={{ gap: 12 }}>
+            {[
+              { h: "Core drafting", d: "Letter type, tone, and homeowner essentials are upfront for fast entry." },
+              { h: "AI assist", d: "Toggle guideline citations or let the model pull sections automatically." },
+              { h: "Delivery ready", d: "Preview instantly, then export or email without opening another tool." },
+            ].map(item => (
+              <div key={item.h} className="card" style={{ padding: 14, background: "#f9fafb" }}>
+                <div style={{ fontWeight: 800, marginBottom: 4 }}>{item.h}</div>
+                <div className="muted">{item.d}</div>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section id="draft" className="card" ref={formRef} style={{ marginTop: 18 }}>
