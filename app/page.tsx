@@ -1,3 +1,5 @@
+'use client';
+
 // Updated homepage layout for HOA Letter AI
 import Layout from './components/Layout';
 import LetterForm from './components/LetterForm';
