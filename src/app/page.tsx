@@ -119,6 +119,13 @@ export default function Page() {
     []
   );
 
+  const displayPreview = useMemo(() => {
+    if (!preview) return "";
+    if (unlocked) return preview;
+    const words = preview.split(/\s+/).slice(0, 80).join(" ");
+    return `${words}${words ? " …" : ""}`;
+  }, [preview, unlocked]);
+
   function effectiveGuidelinesText() {
     const pieces = [
       (community?.guidelines || "").trim(),
@@ -351,14 +358,17 @@ export default function Page() {
       <div className="container">
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{
-              width: 38, height: 38, borderRadius: 12,
-              background: "linear-gradient(135deg, #6366f1, #22c55e)",
-              border: "1px solid rgba(99,102,241,0.15)"
-            }} />
+            <div className="logo-mark">
+              <div className="logo-inner" />
+              <div className="logo-dot" />
+            </div>
             <div>
-              <div style={{ fontWeight: 900, letterSpacing: 0.2 }}>HOA Letter AI</div>
-              <div className="small">Authority-grade HOA communication</div>
+              <div style={{ fontWeight: 900, letterSpacing: 0.4, textTransform: "uppercase", fontSize: 13 }}>
+                HOA Letter AI
+              </div>
+              <div className="small" style={{ color: "var(--brand-ink)" }}>
+                Human clarity. AI speed. Board-ready.
+              </div>
             </div>
           </div>
 
@@ -376,7 +386,7 @@ export default function Page() {
             <span>One-screen workflow</span>
           </div>
 
-          <h1 style={{ fontSize: 48, lineHeight: 1.05, margin: "18px 0 8px" }}>
+          <h1 style={{ fontSize: 48, lineHeight: 1.05, margin: "18px 0 8px", color: "var(--brand-ink)" }}>
             HOA letters, streamlined by AI
           </h1>
 
@@ -663,10 +673,19 @@ export default function Page() {
                 )}
               </div>
 
-              <div style={{ marginTop: 12, padding: 16, borderRadius: 14, border: "1px solid var(--border)", background: "#f9fafb" }}>
-                <pre style={{ margin: 0, whiteSpace: "pre-wrap", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace", fontSize: 14, lineHeight: 1.5, color: "#111827" }}>
-                  {preview}
+              <div className={`preview-shell ${unlocked ? "" : "locked"}`}>
+                <pre className="preview-text">
+                  {displayPreview}
                 </pre>
+                {!unlocked && (
+                  <div className="preview-overlay">
+                    <div className="overlay-badge">Secure HOA branding</div>
+                    <div className="overlay-head">Upgrade to view the full notice</div>
+                    <div className="overlay-copy">
+                      Protect sensitive details and unlock exports with a one-time credit or monthly plan.
+                    </div>
+                  </div>
+                )}
               </div>
 
               {!unlocked ? (
